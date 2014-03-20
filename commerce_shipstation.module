@@ -133,6 +133,42 @@ function commerce_shipstation_endpoint() {
 }
 
 /**
+ * Implements hook_commerce_order_state_info().
+ */
+function commerce_shipstation_commerce_order_state_info() {
+  $order_states = array();
+
+  $order_states['shipstation'] = array(
+    'name' => 'shipstation',
+    'title' => t('ShipStation'),
+    'description' => t('Statuses returned by ShipStation'),
+    'default_status' => 'shipstation_imported',
+  );
+
+  return $order_states;
+}
+
+/**
+ * Implements hook_commerce_order_status_info().
+ */
+function commerce_shipstation_commerce_order_status_info() {
+  $order_statuses = array();
+
+  $order_statuses['shipstation_imported'] = array(
+    'name' => 'shipstation_imported',
+    'title' => t('Imported'),
+    'state' => 'shipstation',
+  );
+  $order_statuses['shipstation_ready'] = array(
+    'name' => 'shipstation_ready',
+    'title' => t('Ready to be Shipped'),
+    'state' => 'shipstation',
+  );
+
+  return $order_statuses;
+}
+
+/**
  * Identify orders to send back to shipstation.
  */
 function commerce_shipstation_export_orders($start_date, $end_date, $page = 0) {
