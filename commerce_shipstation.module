@@ -470,9 +470,24 @@ function commerce_shipstation_export_orders($start_date, $end_date, $page = 0) {
             $weight = $line_item->appendChild($xml->createElement('Weight'));
             $weight->appendChild($xml->createTextNode($product->field_weight->weight->value()));
           }
+
           //$line_item->WeightUnits = $product->field_weight->unit->value();
           $weight_units = $line_item->appendChild($xml->createElement('WeightUnits'));
-          $weight_units->appendChild($xml->createTextNode($product->field_weight->unit->value()));
+
+          // ShipStation will only take the following weight units "Pounds,
+          // Ounces, Grams". Set the value of WeightUnits appropriately. Default
+          // to "Pounds". This will work for "kg" as we have already done the
+          // conversion to pounds above.
+          $unit = $product->field_weight->unit->value();
+          if ($unit == 'g') {
+            $weight_units->appendChild($xml->createTextNode("Grams"));
+          }
+          elseif ($unit == 'oz') {
+            $weight_units->appendChild($xml->createTextNode("Ounces"));
+          }
+          else {
+            $weight_units->appendChild($xml->createTextNode("Pounds"));
+          }
         }
 
         //$line_item->Quantity = number_format($item->quantity->value(), 0);
