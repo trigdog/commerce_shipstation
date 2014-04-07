@@ -121,6 +121,15 @@ function commerce_shipstation_endpoint() {
       $service = $_GET['service'];
       if ($order_number && $tracking_number && $carrier && $service) {
         $commerce_order = commerce_order_load_by_number($order_number);
+
+        $variables = array(
+          '@order_number' => $order_number,
+          '@tracking_number' => $tracking_number,
+          '@carrier' => $carrier,
+          '@service' => $service,
+        );
+
+        watchdog('Commerce Shipstation', 'Action: shipnotify || Order Number: @order_number || Tracking Number: @tracking_number || Carrier: @carrier || Service: @service', $variables);
         return rules_invoke_event('commerce_shipstation_order_success', $commerce_order, $tracking_number, $carrier, $service);
       }
       else {
@@ -215,22 +224,34 @@ function commerce_shipstation_export_orders($start_date, $end_date, $page = 0) {
   else {
     // Return an empty Orders element for shipstation. This is required for
     // setting up your custom store using the "test connection".
-    $output = new SimpleXMLElement("<Orders></Orders>");
-
     header('Content-type: text/xml');
-    $dom = dom_import_simplexml($output)->ownerDocument;
-    $dom->formatOutput = TRUE;
+    $xml = new DOMDocument("1.0", "UTF-8");
+    $xml->appendChild($xml->createElement('Orders'));
+    $xml->formatOutput = true;
 
-    print $dom->saveXML();
+    print $xml->saveXML();
     return;
   }
 
   $bundle_type = variable_get('commerce_shipstation_bundle_field', '');
 
-  $output = new SimpleXMLElement("<Orders></Orders>");
+  // Set up our header.
+  header('Content-Type: text/xml');
+
+  // Create the new DOMDocument.
+  $xml = new DOMDocument("1.0", "UTF-8");
+
+  /*
+  $base = $xml->appendChild($xml->createElement( 'history' ));
+  $name = $base->appendChild($xml->createElement('name'));
+  $name->appendChild($xml->createCDATASection( 'John Smith' ));
+  */
+
+  //$output = new SimpleXMLElement("<Orders></Orders>");
+  $output = $xml->appendChild($xml->createElement('Orders'));
 
   // Insert the number of pages.
-  $output['pages'] = $page_count;
+  $output->setAttribute('pages', $page_count);
 
   // Build the order export page.
   foreach ($orders as $order) {
@@ -255,20 +276,48 @@ function commerce_shipstation_export_orders($start_date, $end_date, $page = 0) {
        * -- coupons used           [provided, sort of]
        */
 
+
       // Create the required 'Order' XML element.
-      $ss_order = $output->addChild('Order');
+      $ss_order = $output->appendChild($xml->createElement('Order'));
 
       // Set children XML elements for the 'Order' element (Some are Required).
-      $ss_order->OrderID = '<![CDATA[' . $data->order_id->value() . ']]>';
-      $ss_order->OrderNumber = '<![CDATA[' . $data->order_number->value() . ']]>';
-      $ss_order->OrderDate = date('m/d/Y H:i', $data->created->value());
-      $ss_order->OrderStatus = '<![CDATA[' . $data->status->value() . ']]>';
-      $ss_order->LastModified = date('m/d/Y H:i', $data->changed->value());
-      $ss_order->ShippingMethod = '<![CDATA[' . $chosen_method->value()->data['shipping_service']['display_title'] . ']]>';
+      //$ss_order->OrderID = '<![CDATA[' . $data->order_id->value() . ']]>';
+      $order_id = $ss_order->appendChild($xml->createElement('OrderID'));
+      $order_id->appendChild($xml->createCDATASection($data->order_id->value()));
+
+      //$ss_order->OrderNumber = '<![CDATA[' . $data->order_number->value() . ']]>';
+      $order_number = $ss_order->appendChild($xml->createElement('OrderNumber'));
+      $order_number->appendChild($xml->createCDATASection($data->order_number->value()));
+
+      //$ss_order->OrderDate = date('m/d/Y H:i', $data->created->value());
+      $order_date = $ss_order->appendChild($xml->createElement('OrderDate'));
+      $order_date->appendChild($xml->createTextNode(date('m/d/y H:i', $data->created->value())));
+
+      //$ss_order->OrderStatus = '<![CDATA[' . $data->status->value() . ']]>';
+      $order_status = $ss_order->appendChild($xml->createElement('OrderStatus'));
+      $order_status->appendChild($xml->createCDATASection($data->status->value()));
+
+      //$ss_order->LastModified = date('m/d/Y H:i', $data->changed->value());
+      $last_modified = $ss_order->appendChild($xml->createElement('LastModified'));
+      $last_modified->appendChild($xml->createTextNode(date('m/d/y H:i', $data->changed->value())));
+
+      //$ss_order->ShippingMethod = '<![CDATA[' . $chosen_method->value()->data['shipping_service']['display_title'] . ']]>';
+      $shipping_method = $ss_order->appendChild($xml->createElement('ShippingMethod'));
+      $shipping_method->appendChild($xml->createCDATASection($chosen_method->value()->data['shipping_service']['display_title']));
+
       //$ss_order->PaymentMethod = '<![CDATA[' . $paymentmethod . ']]>';
-      $ss_order->OrderTotal = $data->commerce_order_total->amount_decimal->value();
+
+      //$ss_order->OrderTotal = $data->commerce_order_total->amount_decimal->value();
+      $order_total = $ss_order->appendChild($xml->createElement('OrderTotal'));
+      $order_total->appendChild($xml->createTextNode($data->commerce_order_total->amount_decimal->value()));
+
       //$ss_order->TaxAmount = '';
-      $ss_order->ShippingAmount = $chosen_method->commerce_unit_price->amount_decimal->value();
+
+      //$ss_order->ShippingAmount = $chosen_method->commerce_unit_price->amount_decimal->value();
+      $shipping_amount = $ss_order->appendChild($xml->createElement('ShippingAmount'));
+      $shipping_amount->appendChild($xml->createTextNode($chosen_method->commerce_unit_price->amount_decimal->value()));
+
+      /*
       //$ss_order->CustomerNotes = '<![CDATA[' . $custnotes . ']]>';
       //$ss_order->InternalNotes = '<![CDATA[' . $intnotes . ']]>';
       //$ss_order->Gift = TRUE/FALSE;
@@ -277,71 +326,110 @@ function commerce_shipstation_export_orders($start_date, $end_date, $page = 0) {
       //$ss_order->CustomField2 = '<![CDATA[' . $custfield2 . ']]>';
       //$ss_order->CustomField3 = '<![CDATA[' . $custfield3 . ']]>';
       //$ss_order->Source = '<![CDATA[' . $source . ']]>';
+      */
 
       // Create the required 'Customer' XML element.
-      $customer = $ss_order->addChild('Customer');
+      $customer = $ss_order->appendChild($xml->createElement('Customer'));
 
       // Set children XML elements for the 'Customer' element.
-      $customer->CustomerCode = '<![CDATA[' . $data->mail->value() . ']]>';
+      //$customer->CustomerCode = '<![CDATA[' . $data->mail->value() . ']]>';
+      $customer_code = $customer->appendChild($xml->createElement('CustomerCode'));
+      $customer_code->appendChild($xml->createCDATASection($data->mail->value()));
 
       // Create the required 'BillTo' XML element.
-      $billing = $customer->addChild('BillTo');
+      //$billing = $customer->addChild('BillTo');
+      $billing = $customer->appendChild($xml->createElement('BillTo'));
 
       // Set children XML elements for the 'BillTo' element.
       $name = $bill->name_line->value();
       if (!empty($name)) {
-        $billing->Name = '<![CDATA[' . $bill->name_line->value() . ']]>';
+        //$billing->Name = '<![CDATA[' . $bill->name_line->value() . ']]>';
+        $billing_name = $billing->appendChild($xml->createElement('Name'));
+        $billing_name->appendChild($xml->createCDATASection($bill->name_line->value()));
       }
       else {
-        $billing->Name = '<![CDATA[' . $bill->first_name->value() . ' ' . $bill->last_name->value() . ']]>';
+        //$billing->Name = '<![CDATA[' . $bill->first_name->value() . ' ' . $bill->last_name->value() . ']]>';
+        $billing_name = $billing->appendChild($xml->createElement('Name'));
+        $billing_name->appendChild($xml->createCDATASection($bill->first_name->value() . ' ' . $bill->last_name->value()));
       }
 
       $organisation = $bill->organisation_name->value();
       if (!empty($organisation)) {
-        $billing->Company = '<![CDATA[' . $bill->organisation_name->value() . ']]>';
+        //$billing->Company = '<![CDATA[' . $bill->organisation_name->value() . ']]>';
+        $company = $billing->appendChild($xml->createElement('Company'));
+        $company->appendChild($xml->createCDATASection($bill->organisation_name->value()));
       }
 
       if (strtolower($field_billing_phone_number) != 'none') {
-        $billing->Phone = '<![CDATA[' . $data->commerce_customer_billing->$field_billing_phone_number->value() . ']]>';
+        //$billing->Phone = '<![CDATA[' . $data->commerce_customer_billing->$field_billing_phone_number->value() . ']]>';
+        $phone = $billing->appendChild($xml->createElement('Phone'));
+        $phone->appendChild($xml->createCDATASection($data->commerce_customer_billing->$field_billing_phone_number->value()));
       }
 
-      $billing->Email = '<![CDATA[' . $data->mail->value() . ']]>';
+      //$billing->Email = '<![CDATA[' . $data->mail->value() . ']]>';
+      $email = $billing->appendChild($xml->createElement('Email'));
+      $email->appendChild($xml->createCDATASection($data->mail->value()));
 
       // Create the required 'ShipTo' XML element.
-      $shipping = $customer->addChild('ShipTo');
+      //$shipping = $customer->addChild('ShipTo');
+      $shipping = $customer->appendChild($xml->createElement('ShipTo'));
 
       // Set children XML elements for the 'ShipTo' element.
       $name = $ship->name_line->value();
       if (!empty($name)) {
-        $shipping->Name = '<![CDATA[' . $ship->name_line->value() . ']]>';
+        //$shipping->Name = '<![CDATA[' . $ship->name_line->value() . ']]>';
+        $shipping_name = $shipping->appendChild($xml->createElement('Name'));
+        $shipping_name->appendChild($xml->createCDATASection($ship->name_line->value()));
       }
       else {
-        $shipping->Name = '<![CDATA[' . $ship->first_name->value() . ' ' . $ship->last_name->value() . ']]>';
+        //$shipping->Name = '<![CDATA[' . $ship->first_name->value() . ' ' . $ship->last_name->value() . ']]>';
+        $shipping_name = $shipping->appendChild($xml->createElement('Name'));
+        $shipping_name->appendChild($xml->createCDATASection($ship->first_name->value() . ' ' . $ship->last_name->value()));
       }
 
       $organisation = $ship->organisation_name->value();
       if (!empty($organisation)) {
-        $shipping->Company = '<![CDATA[' . $ship->organisation_name->value() . ']]>';
+        //$shipping->Company = '<![CDATA[' . $ship->organisation_name->value() . ']]>';
+        $company = $shipping->appendChild($xml->createElement('Company'));
+        $company->appendChild($xml->createCDATASection($ship->organisation_name->value()));
       }
 
-      $shipping->Address1 = '<![CDATA[' . $ship->thoroughfare->value() . ']]>';
+      //$shipping->Address1 = '<![CDATA[' . $ship->thoroughfare->value() . ']]>';
+      $address1 = $shipping->appendChild($xml->createElement('Address1'));
+      $address1->appendChild($xml->createCDATASection($ship->thoroughfare->value()));
 
       $addr2 = $ship->premise->value();
       if (!empty($addr2)) {
-        $shipping->Address2 = '<![CDATA[' . $ship->premise->value() . ']]>';
+        //$shipping->Address2 = '<![CDATA[' . $ship->premise->value() . ']]>';
+        $address2 = $shipping->appendChild($xml->createElement('Address2'));
+        $address2->appendChild($xml->createCDATASection($ship->premise->value()));
       }
 
-      $shipping->City = '<![CDATA[' . $ship->locality->value() . ']]>';
-      $shipping->State = '<![CDATA[' . $ship->administrative_area->value() . ']]>';
-      $shipping->PostalCode = '<![CDATA[' . $ship->postal_code->value() . ']]>';
-      $shipping->Country = '<![CDATA[' . $ship->country->value() . ']]>';
+      //$shipping->City = '<![CDATA[' . $ship->locality->value() . ']]>';
+      $city = $shipping->appendChild($xml->createElement('City'));
+      $city->appendChild($xml->createCDATASection($ship->locality->value()));
+
+      //$shipping->State = '<![CDATA[' . $ship->administrative_area->value() . ']]>';
+      $state = $shipping->appendChild($xml->createElement('State'));
+      $state->appendChild($xml->createCDATASection($ship->administrative_area->value()));
+
+      //$shipping->PostalCode = '<![CDATA[' . $ship->postal_code->value() . ']]>';
+      $postal_code = $shipping->appendChild($xml->createElement('PostalCode'));
+      $postal_code->appendChild($xml->createCDATASection($ship->postal_code->value()));
+
+      //$shipping->Country = '<![CDATA[' . $ship->country->value() . ']]>';
+      $country = $shipping->appendChild($xml->createElement('Country'));
+      $country->appendChild($xml->createCDATASection($ship->country->value()));
 
       if (strtolower($field_shipping_phone_number) != 'none') {
-        $shipping->Phone = '<![CDATA[' . $data->commerce_customer_billing->$field_shipping_phone_number->value() . ']]>';
+        //$shipping->Phone = '<![CDATA[' . $data->commerce_customer_billing->$field_shipping_phone_number->value() . ']]>';
+        $phone = $shipping->appendChild($xml->createElement('Phone'));
+        $phone->appendChild($xml->createCDATASection($data->commerce_customer_billing->$field_shipping_phone_number->value()));
       }
 
       // Create the required 'Items' XML element.
-      $line_items = $ss_order->addChild('Items');
+      //$line_items = $ss_order->addChild('Items');
+      $line_items = $ss_order->appendChild($xml->createElement('Items'));
 
       // Loop through the commerce_order object's commerce_line_items and add all
       // products as a child element.
@@ -355,26 +443,46 @@ function commerce_shipstation_export_orders($start_date, $end_date, $page = 0) {
         $product = entity_metadata_wrapper('commerce_product', $raw_product);
 
         // Create the 'Item' XML element.
-        $line_item = $line_items->addChild('Item');
+        //$line_item = $line_items->addChild('Item');
+        $line_item = $line_items->appendChild($xml->createElement('Item'));
 
         // Set children XML elements for the 'Item' element.
         //$line_item->LineItemID = '';
-        $line_item->SKU = '<![CDATA[' . $product->sku->value() . ']]>';
-        $line_item->Name = '<![CDATA[' . $product->title->value() . ']]>';
+
+        //$line_item->SKU = '<![CDATA[' . $product->sku->value() . ']]>';
+        $sku = $line_item->appendChild($xml->createElement('SKU'));
+        $sku->appendChild($xml->createCDATASection($product->sku->value()));
+
+        //$line_item->Name = '<![CDATA[' . $product->title->value() . ']]>';
+        $name = $line_item->appendChild($xml->createElement('Name'));
+        $name->appendChild($xml->createCDATASection($product->title->value()));
+
         //$line_item->ImageURL = '<![CDATA[' . $imageurl . ']]>';
 
         if (isset($product->field_weight)) {
           if ($product->field_weight->unit->value() == "kg") {
-            $line_item->Weight = 1000 * $product->field_weight->weight->value();
+            //$line_item->Weight = 1000 * $product->field_weight->weight->value();
+            $weight = $line_item->appendChild($xml->createElement('Weight'));
+            $weight->appendChild($xml->createTextNode(1000 * $product->field_weight->weight->value()));
           }
           else {
-            $line_item->Weight = $product->field_weight->weight->value();
+            //$line_item->Weight = $product->field_weight->weight->value();
+            $weight = $line_item->appendChild($xml->createElement('Weight'));
+            $weight->appendChild($xml->createTextNode($product->field_weight->weight->value()));
           }
-          $line_item->WeightUnits = $product->field_weight->unit->value();
+          //$line_item->WeightUnits = $product->field_weight->unit->value();
+          $weight_units = $line_item->appendChild($xml->createElement('WeightUnits'));
+          $weight_units->appendChild($xml->createTextNode($product->field_weight->unit->value()));
         }
 
-        $line_item->Quantity = number_format($item->quantity->value(), 0);
-        $line_item->UnitPrice = $item->commerce_unit_price->amount_decimal->value();
+        //$line_item->Quantity = number_format($item->quantity->value(), 0);
+        $quantity = $line_item->appendChild($xml->createElement('Quantity'));
+        $quantity->appendChild($xml->createTextNode(number_format($item->quantity->value(), 0)));
+
+        //$line_item->UnitPrice = $item->commerce_unit_price->amount_decimal->value();
+        $unit_price = $line_item->appendChild($xml->createElement('UnitPrice'));
+        $unit_price->appendChild($xml->createTextNode($item->commerce_unit_price->amount_decimal->value()));
+
         //$line_item->Location = '<![CDATA[' . $location . ']]>';
 
         // Create the 'Options' and 'Option' XML elements.
@@ -420,11 +528,8 @@ function commerce_shipstation_export_orders($start_date, $end_date, $page = 0) {
     }
   }
 
-  header('Content-type: text/xml');
-  $dom = dom_import_simplexml($output)->ownerDocument;
-  $dom->formatOutput = TRUE;
-
-  print $dom->saveXML();
+  $xml->formatOutput = true;
+  print $xml->saveXML();
 }
 
 /**
