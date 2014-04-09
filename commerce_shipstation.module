@@ -543,6 +543,14 @@ function commerce_shipstation_export_orders($start_date, $end_date, $page = 0) {
     }
   }
 
+  // Update the order to the import status set in the admin configuration.
+  foreach ($orders as $order) {
+    $import_status = variable_get('commerce_shipstation_import_status', '');
+    if (!empty($import_status)) {
+      commerce_order_status_update($order, $import_status);
+    }
+  }
+
   $xml->formatOutput = true;
   print $xml->saveXML();
 }
