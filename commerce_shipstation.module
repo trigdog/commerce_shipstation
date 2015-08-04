@@ -180,7 +180,7 @@ function commerce_shipstation_export_orders($start_date, $end_date, $page = 0) {
     $orders = commerce_order_load_multiple(array_slice($order_ids, 0, $page_size));
 
     // Alter the orders list
-    drupal_alter('commerce_shipstation_export_orders', $orders, $start_date, $end_date, $page);
+    drupal_alter('commerce_shipstation_export_orders', $orders, $start_date, $end_date, $page, $page_size);
 
     $bundle_type = variable_get('commerce_shipstation_bundle_field', '');
 
