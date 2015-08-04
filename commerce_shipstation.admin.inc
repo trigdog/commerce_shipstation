@@ -1,7 +1,7 @@
 <?php
-
 /**
  * @file
+ *
  * Admin settings page.
  */
 
@@ -17,7 +17,7 @@ function commerce_shipstation_admin_page() {
 
   if (empty($options)) {
     $form['commerce_shipstation_error_message'] = array(
-      '#markup' => t("You'll need at least one shipping method module turned on. e.g., Commerce Flatrate shipping"),
+      '#markup' => t('You\'ll need at least one shipping method module turned on. e.g., Commerce Flatrate shipping'),
     );
   }
   else {
@@ -46,6 +46,14 @@ function commerce_shipstation_admin_page() {
       '#default_value' => variable_get('commerce_shipstation_logging', 0),
     );
 
+    // Shipstation reload.
+    $form['commerce_shipstation_reload'] = array(
+      '#type' => 'checkbox',
+      '#title' => t('Reload all orders to ShipStation'),
+      '#description' => t('If this is set, on API endpoint request all orders will be returned.'),
+      '#default_value' => variable_get('commerce_shipstation_reload', 0),
+    );
+
     // Shipstation alternate authentication.
     $form['commerce_shipstation_alternate_auth'] = array(
       '#type' => 'textfield',
@@ -59,7 +67,7 @@ function commerce_shipstation_admin_page() {
       '#type' => 'select',
       '#title' => t('Number of Records to Export per Page'),
       '#description' => t('Sets the number of orders to send to ShipStation at a time. Change this setting if you experience import timeouts.'),
-      '#options' => array(50 => 50, 75 => 75, 100 => 100, 150 => 150),
+      '#options' => array( 20 => 20, 50 => 50, 75 => 75, 100 => 100, 150 => 150 ),
       '#default_value' => variable_get('commerce_shipstation_export_paging', '100'),
     );
 
@@ -93,6 +101,36 @@ function commerce_shipstation_admin_page() {
       '#default_value' => variable_get('commerce_shipstation_bundle_field', ''),
     );
 
+    // Order notes to import.
+    $form['commerce_shipstation_order_notes_field'] = array(
+      '#type' => 'select',
+      '#title' => t('Field used for order notes'),
+      '#required' => FALSE,
+      '#description' => t('Choose a field you use for admin order notes (attached to Commerce Order entity).'),
+      '#options' => _commerce_shipstation_load_field_options(),
+      '#default_value' => variable_get('commerce_shipstation_order_notes_field', ''),
+    );
+
+    // Customer notes to import.
+    $form['commerce_shipstation_customer_notes_field'] = array(
+      '#type' => 'select',
+      '#title' => t('Field used for order notes'),
+      '#required' => FALSE,
+      '#description' => t('Choose a field you use for customer shipping notes (attached to Commerce Order - Shipping Information entity).'),
+      '#options' => _commerce_shipstation_load_field_options(),
+      '#default_value' => variable_get('commerce_shipstation_customer_notes_field', ''),
+    );
+
+    // Product images to import.
+    $form['commerce_shipstation_product_images_field'] = array(
+      '#type' => 'select',
+      '#title' => t('Field used for product images'),
+      '#required' => FALSE,
+      '#description' => t('Choose a field you use for product images.'),
+      '#options' => _commerce_shipstation_load_field_options(),
+      '#default_value' => variable_get('commerce_shipstation_product_images_field', ''),
+    );
+
     // Shipstation order export status.
     $form['commerce_shipstation_export_status'] = array(
       '#type' => 'select',
@@ -100,6 +138,7 @@ function commerce_shipstation_admin_page() {
       '#required' => TRUE,
       '#options' => commerce_order_status_options_list(),
       '#default_value' => variable_get('commerce_shipstation_export_status', ''),
+      '#multiple' => TRUE,
     );
 
     // Shipstation order import status.
@@ -116,8 +155,7 @@ function commerce_shipstation_admin_page() {
       '#type' => 'checkboxes',
       '#title' => t('Shipping Methods Available to ShipStation'),
       '#required' => TRUE,
-      // May need to be drupal_map_assoc.
-      '#options' => $options,
+      '#options' => $options, // may need to be drupal_map_assoc
       '#default_value' => variable_get('commerce_shipstation_exposed_shipping_methods', array()),
     );
 

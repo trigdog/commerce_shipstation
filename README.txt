@@ -38,7 +38,5 @@ in the Custom Store Integration Guide to configure a custom store in ShipStation
 
 To do
 =====
-* complete implementation of watchdog logging
 * implement support for importing coupons and discounts
-* implement support for importing custom order notes
 * implement support for importing sales tax
