@@ -123,6 +123,15 @@ function commerce_shipstation_endpoint() {
       if ($order_number && $tracking_number && $carrier && $service) {
         $commerce_order = commerce_order_load_by_number($order_number);
 
+        $commerce_order->commerce_tracking_number[LANGUAGE_NONE][0]['value'] = $tracking_number;
+        $commerce_order->commerce_shipment_carrier[LANGUAGE_NONE][0]['value'] = $carrier;
+        $commerce_order->commerce_shipment_service[LANGUAGE_NONE][0]['value'] = $service;
+        $order_status = variable_get('commerce_shipstation_shipment_status', '');
+        if (!empty($order_status)) {
+          $commerce_order->order_status = $order_status;
+        }
+        commerce_order_save($commerce_order);
+
         return rules_invoke_event('commerce_shipstation_order_success', $commerce_order, $tracking_number, $carrier, $service);
       }
       else {

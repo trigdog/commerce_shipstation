@@ -150,6 +150,15 @@ function commerce_shipstation_admin_page() {
       '#default_value' => variable_get('commerce_shipstation_import_status', ''),
     );
 
+    // Shipstation order shipment status.
+    $form['commerce_shipstation_shipment_status'] = array(
+      '#type' => 'select',
+      '#title' => t('Order Status to Set After ShipStation Shipment Notification'),
+      '#empty_value' => '',
+      '#options' => commerce_order_status_options_list(),
+      '#default_value' => variable_get('commerce_shipstation_shipment_status', ''),
+    );
+
     // Shipstation available shipping methods.
     $form['commerce_shipstation_exposed_shipping_methods'] = array(
       '#type' => 'checkboxes',
