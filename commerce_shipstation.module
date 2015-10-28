@@ -220,7 +220,6 @@ function commerce_shipstation_export_orders($start_date, $end_date, $page = 0) {
       if ($chosen_method && in_array($chosen_ship, $available_methods)) {
         /*
          * @TODO: create lines with the following information:
-         * -- tax amount             [NEED]
          * -- coupons used           [provided, sort of]
          */
 
@@ -252,6 +251,18 @@ function commerce_shipstation_export_orders($start_date, $end_date, $page = 0) {
         }
         if (strtolower($field_customer_notes) != 'none') {
           $order_fields['#cdata']['CustomerNotes'] = $data->commerce_customer_shipping->$field_customer_notes->value();
+        }
+
+        // Add tax amount (commerce_tax module).
+        $commerce_order_total = $data->commerce_order_total->value();
+        foreach ($commerce_order_total['data']['components'] as $component) {
+          if (isset($component['price']['data']['tax_rate'])) {
+            if (!isset($order_fields['#cdata']['TaxAmount'])) {
+              $order_fields['#cdata']['TaxAmount'] = 0;
+            }
+
+            $order_fields['#cdata']['TaxAmount'] += commerce_currency_amount_to_decimal($component['price']['amount'], $component['price']['currency_code']);
+          }
         }
         commerce_shipstation_addcdata($ss_order, $order_fields);
 

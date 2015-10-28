@@ -39,4 +39,3 @@ in the Custom Store Integration Guide to configure a custom store in ShipStation
 To do
 =====
 * implement support for importing coupons and discounts
-* implement support for importing sales tax
