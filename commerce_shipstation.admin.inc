@@ -33,7 +33,6 @@ function commerce_shipstation_admin_page() {
     $form['commerce_shipstation_password'] = array(
       '#type' => 'password',
       '#title' => t('ShipStation Password'),
-      '#required' => TRUE,
       '#default_value' => variable_get('commerce_shipstation_password', ''),
       '#attributes' => array('autocomplete' => 'off'),
     );
@@ -131,6 +130,29 @@ function commerce_shipstation_admin_page() {
       '#default_value' => variable_get('commerce_shipstation_product_images_field', ''),
     );
 
+    // Gift Wrapping package
+    if (module_exists('commerce_giftwrap')) {
+      $carriers = _commerce_shipstation_get_carriers();
+      if (!empty($carriers)) {
+        $packages_options = array('' => t('None'));
+        foreach ($carriers as $carrier) {
+          $packages = _commerce_shipstation_get_packages($carrier->code);
+          foreach ($packages as $package) {
+            $packages_options[$package->code] = $carrier->name . ' - ' . $package->name;
+          }
+        }
+
+        asort($packages_options);
+
+        $form['commerce_shipstation_giftwrapping_package'] = array(
+          '#type' => 'select',
+          '#title' => t('Gift Wrapping Package'),
+          '#options' => $packages_options,
+          '#default_value' => variable_get('commerce_shipstation_giftwrapping_package', ''),
+        );
+      }
+    }
+
     // Shipstation order export status.
     $form['commerce_shipstation_export_status'] = array(
       '#type' => 'select',
@@ -199,7 +221,9 @@ function commerce_shipstation_admin_page_submit($form, &$form_state) {
       $value = array_keys(array_filter($value));
     }
     if ($key == 'commerce_shipstation_password') {
-      variable_set($key, md5($value));
+      if (!empty($value)) {
+        variable_set($key, $value);
+      }
     }
     else {
       variable_set($key, $value);

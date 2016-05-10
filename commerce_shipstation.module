@@ -65,8 +65,6 @@ function commerce_shipstation_menu() {
 
 /**
  * Establish a service endpoint for shipstation to communicate with
- *
- * @TODO: implement logging
  */
 function commerce_shipstation_endpoint() {
   $authorized = FALSE;
@@ -101,7 +99,7 @@ function commerce_shipstation_endpoint() {
       exit;
     }
     // Bad u/p combo.
-    if ($_SERVER['PHP_AUTH_USER'] != $username || md5($_SERVER['PHP_AUTH_PW']) != $password) {
+    if ($_SERVER['PHP_AUTH_USER'] != $username || ($_SERVER['PHP_AUTH_PW'] != $password && md5($_SERVER['PHP_AUTH_PW']) != $password)) {
       print t('Error: Basic HTTP authentication failed. Please check your credentials and try again.');
       exit;
     }
@@ -110,8 +108,8 @@ function commerce_shipstation_endpoint() {
   // If Shipstation gets past the door, run the call based on the action it defines.
   switch ($_GET['action']) {
     case "export":
-      $start_date = strtotime($_GET['start_date'] . ' UTC');
-      $end_date = strtotime($_GET['end_date'] . ' UTC');
+      $start_date = strtotime($_GET['start_date'] . ' UTC') - 43200;
+      $end_date = strtotime($_GET['end_date'] . ' UTC') + 43200;
       $page = $_GET['page'];
 
       return commerce_shipstation_export_orders($start_date, $end_date, $page);
@@ -324,6 +322,19 @@ function commerce_shipstation_export_orders($start_date, $end_date, $page = 0) {
               )
             );
 
+            // Gift Wrapping package
+            $gift_wrapping_package = variable_get('commerce_shipstation_giftwrapping_package', '');
+            if (!empty($gift_wrapping_package)) {
+              commerce_shipstation_addcdata(
+                $ss_order,
+                array(
+                  '#other' => array(
+                    'packageCode' => $gift_wrapping_package,
+                  ),
+                )
+              );
+            }
+
             continue;
           }
 
@@ -463,4 +474,34 @@ function commerce_shipstation_addweight(&$data, $weight, $weight_units) {
   }
   $data['Weight'] = $weight;
   $data['WeightUnits'] = $weight_units;
+}
+
+/**
+ * Process API request.
+ */
+function _commerce_shipstation_api_request($uri) {
+  $uri = 'https://'
+    . variable_get('commerce_shipstation_username', '') . ':' . variable_get('commerce_shipstation_password', '')
+    . '@ssapi.shipstation.com' . $uri;
+  $response = drupal_http_request($uri);
+
+  return json_decode($response->data);
+}
+
+/**
+ * Get list of shipment carriers available in ShipStation.
+ *
+ * @see http://docs.shipstation.apiary.io/#reference/carriers/list-carriers/list-carriers
+ */
+function _commerce_shipstation_get_carriers() {
+  return _commerce_shipstation_api_request('/carriers');
+}
+
+/**
+ * Get list of shipment packages for a given carrier..
+ *
+ * @see http://docs.shipstation.apiary.io/#reference/carriers/list-packages/list-packages
+ */
+function _commerce_shipstation_get_packages($carrier) {
+  return _commerce_shipstation_api_request('/carriers/listpackages?carrierCode=' . urlencode($carrier));
 }
