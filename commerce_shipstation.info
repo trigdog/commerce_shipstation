@@ -1,14 +1,13 @@
 name = "Commerce ShipStation"
-description = "Commerce integration with ShipStation, an online multi-channel order fulfilment system."
+description = "Commerce integration with ShipStation, an online multi-channel order fulfillment system."
 core = "7.x"
-package = "Commerce (fulfilment)"
+package = "Commerce (contrib)"
 
 ; Dependencies
 dependencies[] = "commerce"
-dependencies[] = "commerce_fulfilment"
 dependencies[] = "commerce_shipping"
 dependencies[] = "rules"
 
 
 ; Configuration
-configure = "admin/commerce/config/fulfilment/shipstation"
+configure = "admin/commerce/config/shipping/shipstation"

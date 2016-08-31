@@ -27,7 +27,7 @@ class SimpleXMLExtended extends SimpleXMLElement {
  */
 function commerce_shipstation_help($path, $arg) {
   switch ($path) {
-    case 'admin/commerce/config/fulfilment/shipstation':
+    case 'admin/commerce/config/shipping/shipstation':
       return t('This module provides integration with ShipStation using the !url.
                 To connect your store to ShipStation using this service, fill in
                 the "URL to custom XML page" field in the Custom Store Setup dialog
@@ -43,20 +43,20 @@ function commerce_shipstation_help($path, $arg) {
  * Implements hook_menu().
  */
 function commerce_shipstation_menu() {
-  $items['admin/commerce/config/fulfilment/shipstation'] = array(
+  $items['admin/commerce/config/shipping/shipstation'] = array(
     'title' => 'ShipStation',
-    'description' => 'Configure fulfilment for ShipStation',
+    'description' => 'Configure ShipStation Integration',
     'page callback' => 'drupal_get_form',
     'page arguments' => array('commerce_shipstation_admin_page'),
-    'access arguments' => array('configure commerce fulfilment'),
+    'access arguments' => array('administer shipping'),
     'file' => 'commerce_shipstation.admin.inc',
     'type' => MENU_LOCAL_TASK,
+    'weight' => 10,
   );
   $items['shipstation/api-endpoint'] = array(
     'title' => 'ShipStation API Callback URI',
     'page callback' => 'commerce_shipstation_endpoint',
     'access callback' => TRUE,
-    'access arguments' => array('access commerce fulfilment'),
     'type' => MENU_CALLBACK,
   );
 
@@ -209,7 +209,7 @@ function commerce_shipstation_export_orders($start_date, $end_date, $page = 0) {
 
       // Get the exposed shipping methods.
       $available_methods = variable_get('commerce_shipstation_exposed_shipping_methods', '');
-      $chosen_method = commerce_fulfilment_get_shipping_lineitem($data);
+      $chosen_method = commerce_shipstation_get_shipping_line_item_wrapper($data);
       // Sanity check for a shipping method on the order.
       if ($chosen_method) {
         $chosen_ship = $chosen_method->value()->data['shipping_service']['shipping_method'];
@@ -504,4 +504,22 @@ function _commerce_shipstation_get_carriers() {
  */
 function _commerce_shipstation_get_packages($carrier) {
   return _commerce_shipstation_api_request('/carriers/listpackages?carrierCode=' . urlencode($carrier));
+}
+
+/**
+ * Fetch the shipping line item object on an order.
+
+ * @param \EntityDrupalWrapper $order_wrapper
+ *   A wrapped commerce order object.
+ *
+ * @return mixed
+ */
+function commerce_shipstation_get_shipping_line_item_wrapper(EntityDrupalWrapper $order_wrapper) {
+  foreach ($order_wrapper->commerce_line_items as $line_item) {
+    if ($line_item->type->value() === 'shipping') {
+      return $line_item;
+    }
+  }
+
+  return FALSE;
 }

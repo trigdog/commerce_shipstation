@@ -19,7 +19,6 @@ Requirements
 This module requires the following modules:
 * Drupal Commerce
 * Commerce Shipping (provided with Drupal Commerce)
-* Commerce Fulfilment
 * Rules
 * at least one shipping method compatible with Commerce Shipping
 
@@ -29,7 +28,7 @@ Additionally, the following modules are recommended:
 Configuration
 ============
 
-You can configure the module settings at admin/commerce/config/fulfilment/shipstation.
+You can configure the module settings at admin/commerce/config/shipping/shipstation.
 
 Usage
 =====
