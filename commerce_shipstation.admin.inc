@@ -76,7 +76,7 @@ function commerce_shipstation_admin_page() {
       '#title' => t('Field for billing phone number'),
       '#required' => FALSE,
       '#description' => t('Select the field you are using for phone numbers in order data here.'),
-      '#options' => _commerce_shipstation_load_field_options(),
+      '#options' => _commerce_shipstation_load_field_options('commerce_customer_profile', 'billing'),
       '#default_value' => variable_get('commerce_shipstation_billing_phone_number_field', ''),
     );
 
@@ -86,7 +86,7 @@ function commerce_shipstation_admin_page() {
       '#title' => t('Field for shipping phone number'),
       '#required' => FALSE,
       '#description' => t('Select the field you are using for phone numbers in order data here.'),
-      '#options' => _commerce_shipstation_load_field_options(),
+      '#options' => _commerce_shipstation_load_field_options('commerce_customer_profile', 'shipping'),
       '#default_value' => variable_get('commerce_shipstation_shipping_phone_number_field', ''),
     );
 
@@ -96,7 +96,7 @@ function commerce_shipstation_admin_page() {
       '#title' => t('Field used for bundled products'),
       '#required' => FALSE,
       '#description' => t('Set this if you are using an Entity Reference field on line items to create a product bundle. This will ensure that your bundled products are imported by ShipStation.'),
-      '#options' => _commerce_shipstation_load_field_options(),
+      '#options' => _commerce_shipstation_load_field_options('commerce_line_item'),
       '#default_value' => variable_get('commerce_shipstation_bundle_field', ''),
     );
 
@@ -106,7 +106,7 @@ function commerce_shipstation_admin_page() {
       '#title' => t('Field used for order notes'),
       '#required' => FALSE,
       '#description' => t('Choose a field you use for admin order notes (attached to Commerce Order entity).'),
-      '#options' => _commerce_shipstation_load_field_options(),
+      '#options' => _commerce_shipstation_load_field_options('commerce_order'),
       '#default_value' => variable_get('commerce_shipstation_order_notes_field', ''),
     );
 
@@ -116,7 +116,7 @@ function commerce_shipstation_admin_page() {
       '#title' => t('Field used for order notes'),
       '#required' => FALSE,
       '#description' => t('Choose a field you use for customer shipping notes (attached to Commerce Order - Shipping Information entity).'),
-      '#options' => _commerce_shipstation_load_field_options(),
+      '#options' => _commerce_shipstation_load_field_options('commerce_customer_profile', 'shipping'),
       '#default_value' => variable_get('commerce_shipstation_customer_notes_field', ''),
     );
 
@@ -126,7 +126,7 @@ function commerce_shipstation_admin_page() {
       '#title' => t('Field used for product images'),
       '#required' => FALSE,
       '#description' => t('Choose a field you use for product images.'),
-      '#options' => _commerce_shipstation_load_field_options(),
+      '#options' => _commerce_shipstation_load_field_options('commerce_product'),
       '#default_value' => variable_get('commerce_shipstation_product_images_field', ''),
     );
 
@@ -235,13 +235,36 @@ function commerce_shipstation_admin_page_submit($form, &$form_state) {
 
 
 /**
- * Builds a list of all fields available on the site.
+ * Builds a list of fields available to a commerce entity.
+ *
+ * @param string $entity_type
+ *   The entity type to limit the results to.
+ * @param string $bundle
+ *   An optional bundle to limit the results to.
+ *
+ * @return array
+ *   An array of options keyed by field name.
  */
-function _commerce_shipstation_load_field_options() {
-  $options = array();
-  $options['None'] = t('None');
-  foreach (field_info_fields() as $field_name => $field) {
-    $options[$field_name] = $field_name;
+function _commerce_shipstation_load_field_options($entity_type, $bundle = NULL) {
+  $options = array('none' => t('None'));
+  $fields = array();
+
+  $instances = (array) field_info_instances($entity_type, $bundle);
+
+  // Build the list from returned instances.
+  if (!empty($bundle)) {
+    $options = array_merge($options, drupal_map_assoc(array_keys($instances)));
   }
+
+  // Loop through each bundle and build the instance list.
+  else {
+    foreach ($instances as $bundle) {
+      foreach ($bundle as $field_name => $instance) {
+        $options[$field_name] = $field_name;
+      }
+    }
+  }
+
+  sort($options);
   return $options;
 }
