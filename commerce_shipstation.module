@@ -112,13 +112,15 @@ function commerce_shipstation_endpoint_authenticate() {
   $password = variable_get('commerce_shipstation_password', '');
 
   // Allow ShipStation to authenticate using an auth token.
-  if (!empty ($_GET['auth_key']) && $auth_key == $_GET['auth_key']) {
+  if (!empty($auth_key) && !empty($_GET['auth_key']) && $auth_key == $_GET['auth_key']) {
     return TRUE;
   }
 
-  // Allow Shipstation to authenticate using basic auth.
-  if ($_SERVER['PHP_AUTH_USER'] == $username && ($_SERVER['PHP_AUTH_PW'] == $password || md5($_SERVER['PHP_AUTH_PW']) == $password)) {
-    return TRUE;
+  // Allow ShipStation to authenticate using basic auth.
+  if (!empty($username) && !empty($password) && !empty($_SERVER['PHP_AUTH_USER']) && !empty($_SERVER['PHP_AUTH_PW'])) {
+    if ($_SERVER['PHP_AUTH_USER'] == $username && ($_SERVER['PHP_AUTH_PW'] == $password || md5($_SERVER['PHP_AUTH_PW']) == $password)) {
+      return TRUE;
+    }
   }
 
   // If all authentication methods fail, return a 401.
