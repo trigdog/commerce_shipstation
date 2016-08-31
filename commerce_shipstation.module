@@ -9,22 +9,6 @@
 define('COMMERCE_SHIPSTATION_DATE_FORMAT', 'm/d/y H:m A');
 
 /**
- * Wrapper class to ease XML CDATA using.
- */
-class SimpleXMLExtended extends SimpleXMLElement {
-  /**
-   * Add CDATA segment.
-   *
-   * @param $cdata_text
-   */
-  public function addCData($cdata_text) {
-    $node = dom_import_simplexml($this);
-    $no = $node->ownerDocument;
-    $node->appendChild($no->createCDATASection($cdata_text));
-  }
-}
-
-/**
  * Implements hook_help().
  */
 function commerce_shipstation_help($path, $arg) {
@@ -173,7 +157,8 @@ function commerce_shipstation_export_orders() {
   $results = $query->execute();
 
   // Instantiate a new XML object for our export.
-  $output = new SimpleXMLExtended('<Orders></Orders>');
+  module_load_include('inc', 'commerce_shipstation', 'includes/commerce_shipstation.simplexmlelement');
+  $output = new CommerceShipStationSimpleXMLElement('<Orders></Orders>');
 
   // Log the request information.
   if (variable_get('commerce_shipstation_logging')) {
