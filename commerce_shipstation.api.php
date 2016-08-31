@@ -16,12 +16,14 @@
  * You may want to add fields, load additional data or even remove some of them.
  *
  * @param $orders array An array of loaded orders.
- * @param $start_date integer Start date timestamp.
- * @param $end_date integer End date timestamp.
- * @param $page integer Current page requested by ShipStation.
- * @param $page_size integer Amount of items for a given page.
+ * @param $context array
+ *  An array of context values to base the alter routines on.
+ *   start_date integer Start date timestamp.
+ *   end_date integer End date timestamp.
+ *   page integer Current page requested by ShipStation.
+ *   page_size integer Amount of items for a given page.
  */
-function hook_commerce_shipstation_export_orders_alter(&$orders, $start_date, $end_date, $page, $page_size) {
+function hook_commerce_shipstation_export_orders_alter(&$orders, $context) {
   foreach ($orders as $order) {
     // Log order processing to 3-part app.
   }

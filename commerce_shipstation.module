@@ -187,7 +187,13 @@ function commerce_shipstation_export_orders() {
     $orders = commerce_order_load_multiple(array_keys($results['commerce_order']));
 
     // Allow other modules to alter the list of orders.
-    drupal_alter('commerce_shipstation_export_orders', $orders, $start_date->getTimestamp(), $end_date->getTimestamp(), $page, $page_size);
+    $context = array(
+      'start_date' => $start_date->getTimestamp(),
+      'end_date' => $end_date->getTimestamp(),
+      'page' => $page,
+      'page_size' => $page_size
+    );
+    drupal_alter('commerce_shipstation_export_orders', $orders, $context);
 
     $output['pages'] = ceil(count($count_result['commerce_order']) / $page_size);
 
