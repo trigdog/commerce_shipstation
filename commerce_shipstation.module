@@ -153,6 +153,8 @@ function commerce_shipstation_export_orders($start_date, $end_date, $page = 0) {
   $status = variable_get('commerce_shipstation_export_status', array());
   $page_size = variable_get('commerce_shipstation_export_paging', 100);
   $start_page = $page > 0 ? $page - 1 : 0;
+  $shipping_services = commerce_shipping_services();
+  $available_methods = variable_get('commerce_shipstation_exposed_shipping_methods', '');
 
   // Determine site-specific field reference fields.
   $field_billing_phone_number = variable_get('commerce_shipstation_billing_phone_number_field', 'none');
@@ -225,13 +227,18 @@ function commerce_shipstation_export_orders($start_date, $end_date, $page = 0) {
         watchdog('commerce_shipstation', 'Processing order ' . $order->order_id, array(), WATCHDOG_DEBUG);
       }
 
-      // Get the exposed shipping methods.
-      $available_methods = variable_get('commerce_shipstation_exposed_shipping_methods', '');
+      // Load the shipping line item wrapper.
       $shipping_li_wrapper = commerce_shipstation_get_shipping_line_item_wrapper($order_wrapper);
 
       // Sanity check for a shipping method on the order.
       if (!empty($shipping_li_wrapper)) {
-        $shipping_method = $shipping_li_wrapper->value()->data['shipping_service']['shipping_method'];
+        try {
+          $shipping_service = $shipping_li_wrapper->commerce_shipping_service->value();
+          $shipping_method = !empty($shipping_services[$shipping_service]) ? $shipping_services[$shipping_service]['shipping_method'] : FALSE;
+        }
+        catch (Exception $ex) {
+          $shipping_method = FALSE;
+        }
       }
 
       // Only process orders which have authorized shipping methods.
