@@ -326,8 +326,9 @@ function commerce_shipstation_export_orders() {
         }
         commerce_shipstation_addcdata($shipping, $shipping_fields);
 
-        $line_items = $order_xml->addChild('Items');
+        $line_items_xml = $order_xml->addChild('Items');
         foreach ($order_wrapper->commerce_line_items as $id => $line_item_wrapper) {
+          $line_item = $line_item_wrapper->value();
 
           // Legacy support for gift wrapping.
           if ($line_item_wrapper->type->value() == 'giftwrap') {
@@ -366,7 +367,7 @@ function commerce_shipstation_export_orders() {
           $product_wrapper = $line_item_wrapper->commerce_product;
           $weight_field = commerce_physical_entity_weight_field_name('commerce_product', $product_wrapper->value());
 
-          $line_item = $line_items->addChild('Item');
+          $line_item_xml = $line_items_xml->addChild('Item');
 
           $line_item_cdata = array(
             'SKU' => $product_wrapper->sku->value(),
@@ -414,14 +415,14 @@ function commerce_shipstation_export_orders() {
             }
           }
 
-          commerce_shipstation_addcdata($line_item, $line_item_fields);
+          commerce_shipstation_addcdata($line_item_xml, $line_item_fields);
 
           // Line item options.
           // If the product contains an entity reference field (e.g., for a product bundle).
           if (isset($line_item_wrapper->$bundle_type)) {
             foreach ($line_item_wrapper->$bundle_type as $bundle_item) {
               if ($bundle_item->type() == 'commerce_product') {
-                $line_item = $line_items->addChild('Item');
+                $line_item_xml = $line_items_xml->addChild('Item');
 
                 $unit_price = _commerce_shipstation_price_excluding_components($line_item_wrapper->commerce_unit_price->value(), array('discount', 'tax'));
                 $line_item_fields = array(
@@ -441,13 +442,13 @@ function commerce_shipstation_export_orders() {
                 if (!empty($bundle_weight_field) && !empty($bundle_item->{$bundle_weight_field})) {
                   commerce_shipstation_addweight($line_item_fields['#other'], $bundle_item->{$bundle_weight_field}->weight->value(), $bundle_item->{$bundle_weight_field}->unit->value());
                 }
-                commerce_shipstation_addcdata($line_item, $line_item_fields);
+                commerce_shipstation_addcdata($line_item_xml, $line_item_fields);
               }
             }
           }
 
           // Alter line item XML
-          drupal_alter('commerce_shipstation_line_item_xml', $line_item, $line_item_wrapper->value());
+          drupal_alter('commerce_shipstation_line_item_xml', $line_item_xml, $line_item);
         }
 
         // Parse price component data for taxes and discounts.
@@ -464,7 +465,7 @@ function commerce_shipstation_export_orders() {
 
           // Create line items for discounts.
           if (!empty($component['price']['data']['discount_component_title'])) {
-            $line_item = $line_items->addChild('Item');
+            $line_item_xml = $line_items_xml->addChild('Item');
 
             $line_item_cdata = array(
               'SKU' => NULL,
@@ -480,7 +481,7 @@ function commerce_shipstation_export_orders() {
               ),
             );
 
-            commerce_shipstation_addcdata($line_item, $line_item_fields);
+            commerce_shipstation_addcdata($line_item_xml, $line_item_fields);
           }
         }
         commerce_shipstation_addcdata($order_xml, $order_fields);
