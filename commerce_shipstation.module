@@ -224,6 +224,7 @@ function commerce_shipstation_export_orders() {
 
       // Load the shipping line item wrapper.
       $shipping_li_wrapper = commerce_shipstation_get_shipping_line_item_wrapper($order_wrapper);
+      $shipping_line_item = $shipping_li_wrapper->value();
 
       // Sanity check for a shipping method on the order.
       if (!empty($shipping_li_wrapper)) {
@@ -260,7 +261,7 @@ function commerce_shipstation_export_orders() {
           '#cdata' => array(
             'OrderNumber' => $order_wrapper->order_number->value(),
             'OrderStatus' => $order_wrapper->status->value(),
-            'ShippingMethod' => $shipping_li_wrapper->value()->data['shipping_service']['display_title'],
+            'ShippingMethod' => !empty($shipping_line_item->data['shipping_service']['display_title']) ? $shipping_line_item->data['shipping_service']['display_title'] : t('Shipping'),
           ),
           '#other' => array(
             'OrderDate' => date(COMMERCE_SHIPSTATION_DATE_FORMAT, $order_date),
