@@ -3,7 +3,7 @@
 /**
  * @file
  *
- * Contains primary functions for the Commerce Shipstation module.
+ * Contains primary functions for the Commerce ShipStation module.
  */
 
 define('COMMERCE_SHIPSTATION_DATE_FORMAT', 'm/d/y H:m A');
@@ -67,7 +67,7 @@ function commerce_shipstation_endpoint() {
 
   // Authenticate the request before proceeding.
   if (commerce_shipstation_endpoint_authenticate()) {
-    // If Shipstation is authenticated, run the call based on the action it defines.
+    // If ShipStation is authenticated, run the call based on the action it defines.
     switch ($_GET['action']) {
       case 'export':
         commerce_shipstation_export_orders();
@@ -76,7 +76,7 @@ function commerce_shipstation_endpoint() {
         commerce_shipstation_request_ship_notify();
         break;
       default:
-        drupal_set_message(t('The Shipstation request action is invalid'), 'error');
+        drupal_set_message(t('The ShipStation request action is invalid'), 'error');
         watchdog('commerce_shipstation', t('Invalid request action received from ShipStation. Enable or check request logging for more information'), WATCHDOG_ERROR);
         drupal_access_denied();
     }
@@ -494,7 +494,7 @@ function commerce_shipstation_export_orders() {
 }
 
 /**
- * Callback for Shipstation shipnotify requests.
+ * Callback for ShipStation shipnotify requests.
  */
 function commerce_shipstation_request_ship_notify() {
   $order_number = $_GET['order_number'];
@@ -502,7 +502,7 @@ function commerce_shipstation_request_ship_notify() {
   $carrier = $_GET['carrier'];
   $service = $_GET['service'];
 
-  // Order number and carrier are required fields for Shipstation and should
+  // Order number and carrier are required fields for ShipStation and should
   // always be provided in a shipnotify call.
   if ($order_number && $carrier) {
     $commerce_order = commerce_order_load_by_number($order_number);
