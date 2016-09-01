@@ -482,6 +482,9 @@ function commerce_shipstation_export_orders() {
 
         // Alter order XML
         drupal_alter('commerce_shipstation_order_xml', $order_xml, $order);
+
+        // Notify rules that the order has been exported.
+        rules_invoke_event('commerce_shipstation_order_exported', $order);
       }
     }
   }
