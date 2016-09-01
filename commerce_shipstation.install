@@ -80,3 +80,11 @@ function commerce_shipstation_uninstall() {
 function commerce_shipstation_update_7001(&$sandbox) {
   commerce_shipstation_install_helper();
 }
+
+/**
+ * Remove old variables.
+ */
+function commerce_shipstation_update_7002(&$sandbox) {
+  variable_del('commerce_shipstation_shipment_status');
+  variable_del('commerce_shipstation_import_status');
+}
