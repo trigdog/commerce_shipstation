@@ -34,7 +34,3 @@ Usage
 =====
 The module creates an endpoint for ShipStation to communicate with at shipstation/api-endpoint. Follow the instructions
 in the Custom Store Integration Guide to configure a custom store in ShipStation.
-
-To do
-=====
-* implement support for importing coupons and discounts
