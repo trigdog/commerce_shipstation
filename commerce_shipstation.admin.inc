@@ -21,7 +21,7 @@ function commerce_shipstation_admin_page() {
     );
   }
   else {
-    // Shipstation username.
+    // ShipStation username.
     $form['commerce_shipstation_username'] = array(
       '#type' => 'textfield',
       '#title' => t('ShipStation Username'),
@@ -29,7 +29,7 @@ function commerce_shipstation_admin_page() {
       '#default_value' => variable_get('commerce_shipstation_username', ''),
     );
 
-    // Shipstation password.
+    // ShipStation password.
     $form['commerce_shipstation_password'] = array(
       '#type' => 'password',
       '#title' => t('ShipStation Password'),
@@ -37,7 +37,7 @@ function commerce_shipstation_admin_page() {
       '#attributes' => array('autocomplete' => 'off'),
     );
 
-    // Shipstation logging.
+    // ShipStation logging.
     $form['commerce_shipstation_logging'] = array(
       '#type' => 'checkbox',
       '#title' => t('Log requests to ShipStation'),
@@ -45,7 +45,7 @@ function commerce_shipstation_admin_page() {
       '#default_value' => variable_get('commerce_shipstation_logging', 0),
     );
 
-    // Shipstation reload.
+    // ShipStation reload.
     $form['commerce_shipstation_reload'] = array(
       '#type' => 'checkbox',
       '#title' => t('Reload all orders to ShipStation'),
@@ -53,7 +53,7 @@ function commerce_shipstation_admin_page() {
       '#default_value' => variable_get('commerce_shipstation_reload', 0),
     );
 
-    // Shipstation alternate authentication.
+    // ShipStation alternate authentication.
     $form['commerce_shipstation_alternate_auth'] = array(
       '#type' => 'textfield',
       '#title' => t('Alternate Authentication'),
@@ -61,7 +61,7 @@ function commerce_shipstation_admin_page() {
       '#default_value' => variable_get('commerce_shipstation_alternate_auth', ''),
     );
 
-    // Shipstation export paging.
+    // ShipStation export paging.
     $form['commerce_shipstation_export_paging'] = array(
       '#type' => 'select',
       '#title' => t('Number of Records to Export per Page'),
@@ -153,7 +153,7 @@ function commerce_shipstation_admin_page() {
       }
     }
 
-    // Shipstation order export status.
+    // ShipStation order export status.
     $form['commerce_shipstation_export_status'] = array(
       '#type' => 'select',
       '#title' => t('Order Status to Export into ShipStation'),
@@ -163,7 +163,7 @@ function commerce_shipstation_admin_page() {
       '#multiple' => TRUE,
     );
 
-    // Shipstation available shipping methods.
+    // ShipStation available shipping methods.
     $form['commerce_shipstation_exposed_shipping_methods'] = array(
       '#type' => 'checkboxes',
       '#title' => t('Shipping Methods Available to ShipStation'),
