@@ -77,7 +77,7 @@ function commerce_shipstation_endpoint() {
         break;
       default:
         drupal_set_message(t('The ShipStation request action is invalid'), 'error');
-        watchdog('commerce_shipstation', 'Invalid request action received from ShipStation. Enable or check request logging for more information', WATCHDOG_ERROR);
+        watchdog('commerce_shipstation', 'Invalid request action received from ShipStation. Enable or check request logging for more information', array(), WATCHDOG_ERROR);
         drupal_access_denied();
     }
   }
@@ -111,7 +111,7 @@ function commerce_shipstation_endpoint_authenticate() {
   header("WWW-Authenticate: Basic realm =\"ShipStation XML API for Drupal Commerce");
   header("HTTP/1.0 401 Unauthorized");
   drupal_set_message(t('Error: Authentication failed. Please check your credentials and try again.'), 'error');
-  watchdog('commerce_shipstation', 'Error: Authentication failed when accepting request. Enable or check ShipStation request logging for more information.', WATCHDOG_ERROR);
+  watchdog('commerce_shipstation', 'Error: Authentication failed when accepting request. Enable or check ShipStation request logging for more information.', array(), WATCHDOG_ERROR);
   drupal_exit();
   return FALSE;
 }
