@@ -209,10 +209,10 @@ function commerce_shipstation_export_orders() {
 
       // Load the shipping line item wrapper.
       $shipping_li_wrapper = commerce_shipstation_get_shipping_line_item_wrapper($order_wrapper);
-      $shipping_line_item = $shipping_li_wrapper->value();
 
-      // Sanity check for a shipping method on the order.
+      // Determine the shipping service and shipping method for the order.
       if (!empty($shipping_li_wrapper)) {
+        $shipping_line_item = $shipping_li_wrapper->value();
         try {
           $shipping_service = $shipping_li_wrapper->commerce_shipping_service->value();
           $shipping_method = !empty($shipping_services[$shipping_service]) ? $shipping_services[$shipping_service]['shipping_method'] : FALSE;
@@ -220,6 +220,10 @@ function commerce_shipstation_export_orders() {
         catch (Exception $ex) {
           $shipping_method = FALSE;
         }
+      }
+      else {
+        // Do not proceed if a shipping line item does not exist.
+        continue;
       }
 
       // Only process orders which have authorized shipping methods.
@@ -647,12 +651,12 @@ function _commerce_shipstation_get_packages($carrier) {
 /**
  * Fetch the shipping line item object on an order.
 
- * @param \EntityDrupalWrapper $order_wrapper
+ * @param \EntityMetadataWrapper $order_wrapper
  *   A wrapped commerce order object.
  *
  * @return mixed
  */
-function commerce_shipstation_get_shipping_line_item_wrapper(EntityDrupalWrapper $order_wrapper) {
+function commerce_shipstation_get_shipping_line_item_wrapper(EntityMetadataWrapper $order_wrapper) {
   foreach ($order_wrapper->commerce_line_items as $line_item) {
     if ($line_item->type->value() === 'shipping') {
       return $line_item;
