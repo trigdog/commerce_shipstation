@@ -27,6 +27,7 @@ function commerce_shipstation_admin_page() {
       '#title' => t('ShipStation Username'),
       '#required' => TRUE,
       '#default_value' => variable_get('commerce_shipstation_username', ''),
+      '#description' => t('Create a username for request authentication. This is NOT your ShipStation account username.'),
     );
 
     // ShipStation password.
@@ -35,6 +36,7 @@ function commerce_shipstation_admin_page() {
       '#title' => t('ShipStation Password'),
       '#default_value' => variable_get('commerce_shipstation_password', ''),
       '#attributes' => array('autocomplete' => 'off'),
+      '#description' => t('Create a password for request authentication. This is NOT your ShipStation account password.'),
     );
 
     // ShipStation logging.
