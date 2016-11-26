@@ -14,9 +14,7 @@ function commerce_shipstation_install_helper() {
   $fields = field_info_fields();
   $instances = field_info_instances();
 
-  /**
-   * Shipment fields
-   */
+  // Shipment fields.
   $text_fields = array(
     'commerce_shipment_carrier' => t('Shipment Carrier'),
     'commerce_tracking_number' => t('Tracking Number'),
@@ -63,7 +61,7 @@ function commerce_shipstation_uninstall() {
   $fields = array(
     'commerce_shipment_carrier',
     'commerce_tracking_number',
-    'commerce_shipment_service'
+    'commerce_shipment_service',
   );
   foreach ($fields as $field) {
     $instance = field_info_instance('commerce_order', 'commerce_order', $field);

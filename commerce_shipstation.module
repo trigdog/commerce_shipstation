@@ -2,7 +2,6 @@
 
 /**
  * @file
- *
  * Contains primary functions for the Commerce ShipStation module.
  */
 
@@ -20,7 +19,7 @@ function commerce_shipstation_help($path, $arg) {
                 with the following URL: !endpoint',
         array(
           '!url' => l(t('Custom Store Development Integration'), "http://api.shipstation.com/"),
-          '!endpoint' => 'http://' . $_SERVER['HTTP_HOST'] . base_path() . 'shipstation/api-endpoint'
+          '!endpoint' => 'http://' . $_SERVER['HTTP_HOST'] . base_path() . 'shipstation/api-endpoint',
         ));
   }
 }
@@ -50,7 +49,7 @@ function commerce_shipstation_menu() {
 }
 
 /**
- * Establish a service endpoint for shipstation to communicate with
+ * Establish a service endpoint for shipstation to communicate with.
  */
 function commerce_shipstation_endpoint() {
   drupal_page_is_cacheable(FALSE);
@@ -72,9 +71,11 @@ function commerce_shipstation_endpoint() {
       case 'export':
         commerce_shipstation_export_orders();
         break;
+
       case 'shipnotify':
         commerce_shipstation_request_ship_notify();
         break;
+
       default:
         drupal_set_message(t('The ShipStation request action is invalid'), 'error');
         watchdog('commerce_shipstation', 'Invalid request action received from ShipStation. Enable or check request logging for more information', array(), WATCHDOG_ERROR);
@@ -88,6 +89,7 @@ function commerce_shipstation_endpoint() {
  * Authorizes a ShipStation request.
  *
  * @return bool
+ *   TRUE if authentication methods succeed, FALSE if they fail.
  */
 function commerce_shipstation_endpoint_authenticate() {
   $authorized = FALSE;
@@ -117,7 +119,7 @@ function commerce_shipstation_endpoint_authenticate() {
 }
 
 /**
- * Identify orders to send back to shipstation
+ * Identify orders to send back to shipstation.
  */
 function commerce_shipstation_export_orders() {
   $timezone = new DateTimeZone('UTC');
@@ -162,10 +164,12 @@ function commerce_shipstation_export_orders() {
 
   // Log the request information.
   if (variable_get('commerce_shipstation_logging')) {
-    watchdog('commerce_shipstation', 'Action:' . check_plain($_GET['action']) .
-      ' Orders:' . (isset($results['commerce_order']) ? count($results['commerce_order']) : 0) .
-      ' Since:' . format_date($start_date->getTimestamp(), 'short') . '(' . $start_date->getTimestamp() . ')' .
-      ' To: ' . format_date($end_date->getTimestamp(), 'short') . '(' . $end_date->getTimestamp() . ')');
+    $message = 'Action:' . check_plain($_GET['action']);
+    $message .= ' Orders: ' . (isset($results['commerce_order']) ? count($results['commerce_order']) : 0);
+    $message .= ' Since: ' . format_date($start_date->getTimestamp(), 'short') . '(' . $start_date->getTimestamp() . ')';
+    $message .= ' To: ' . format_date($end_date->getTimestamp(), 'short') . '(' . $end_date->getTimestamp() . ')';
+
+    watchdog('commerce_shipstation', '!message', array('!message' => $message));
   }
 
   if (isset($results['commerce_order'])) {
@@ -176,7 +180,7 @@ function commerce_shipstation_export_orders() {
       'start_date' => $start_date->getTimestamp(),
       'end_date' => $end_date->getTimestamp(),
       'page' => $page,
-      'page_size' => $page_size
+      'page_size' => $page_size,
     );
     drupal_alter('commerce_shipstation_export_orders', $orders, $context);
 
@@ -189,13 +193,15 @@ function commerce_shipstation_export_orders() {
 
       try {
         $bill = $order_wrapper->commerce_customer_billing->value() ? $order_wrapper->commerce_customer_billing->commerce_customer_address : NULL;
-      } catch (Exception $ex) {
+      }
+      catch (Exception $ex) {
         $bill = FALSE;
       }
 
       try {
         $ship = $order_wrapper->commerce_customer_shipping->value() ? $order_wrapper->commerce_customer_shipping->commerce_customer_address : NULL;
-      } catch (Exception $ex) {
+      }
+      catch (Exception $ex) {
         $ship = FALSE;
       }
 
@@ -204,7 +210,7 @@ function commerce_shipstation_export_orders() {
       }
 
       if (variable_get('commerce_shipstation_logging')) {
-        watchdog('commerce_shipstation', 'Processing order ' . $order->order_id, array(), WATCHDOG_DEBUG);
+        watchdog('commerce_shipstation', '!message', array('!message' => 'Processing order ' . $order->order_id), WATCHDOG_DEBUG);
       }
 
       // Load the shipping line item wrapper.
@@ -297,7 +303,7 @@ function commerce_shipstation_export_orders() {
           try {
             $billing_fields['#cdata']['Phone'] = $order_wrapper->commerce_customer_billing->$field_billing_phone_number->value();
           }
-          catch (Exception $ex){
+          catch (Exception $ex) {
             // No action needed if phone can't be added.
           }
         }
@@ -343,7 +349,7 @@ function commerce_shipstation_export_orders() {
               )
             );
 
-            // Gift Wrapping package
+            // Gift Wrapping package.
             $gift_wrapping_package = variable_get('commerce_shipstation_giftwrapping_package', '');
             if (!empty($gift_wrapping_package)) {
               commerce_shipstation_addcdata(
@@ -448,7 +454,7 @@ function commerce_shipstation_export_orders() {
             }
           }
 
-          // Alter line item XML
+          // Alter line item XML.
           drupal_alter('commerce_shipstation_line_item_xml', $line_item_xml, $line_item);
         }
 
@@ -487,7 +493,7 @@ function commerce_shipstation_export_orders() {
         }
         commerce_shipstation_addcdata($order_xml, $order_fields);
 
-        // Alter order XML
+        // Alter order XML.
         drupal_alter('commerce_shipstation_order_xml', $order_xml, $order);
 
         // Notify rules that the order has been exported.
@@ -497,7 +503,7 @@ function commerce_shipstation_export_orders() {
   }
 
   // Return the XML response for ShipStation.
-  Header('Content-type: application/xml');
+  header('Content-type: application/xml');
   $dom = dom_import_simplexml($output)->ownerDocument;
   $dom->formatOutput = TRUE;
   print $dom->saveXML();
@@ -532,7 +538,9 @@ function commerce_shipstation_request_ship_notify() {
  * Returns a price object total excluding the provided components.
  *
  * @param $price
- * @param $components
+ * @param array $components
+ *
+ * @return array
  */
 function _commerce_shipstation_price_excluding_components($price, $components = array()) {
   if (!empty($price['data']['components'])) {
@@ -579,13 +587,13 @@ function commerce_shipstation_shipping_methods($methods) {
 }
 
 /**
- * Helper function to add CDATA segments to XML file
+ * Helper function to add CDATA segments to XML file.
  */
 function commerce_shipstation_addcdata($xml, $data) {
   if (isset($data['#cdata'])) {
     foreach ($data['#cdata'] as $field_name => $value) {
       $xml->{$field_name} = NULL;
-      $xml->{$field_name}->addCData($value);
+      $xml->{$field_name}->addCdata($value);
     }
   }
   if (isset($data['#other'])) {
@@ -603,12 +611,15 @@ function commerce_shipstation_addweight(&$data, $weight, $weight_units) {
     case 'g':
       $weight_units = 'Gram';
       break;
+
     case 'lb':
       $weight_units = 'Pounds';
       break;
+
     case 'oz':
       $weight_units = 'Ounces';
       break;
+
     case 'kg':
       $weight_units = 'Gram';
       $weight = 1000 * $weight;
@@ -650,7 +661,7 @@ function _commerce_shipstation_get_packages($carrier) {
 
 /**
  * Fetch the shipping line item object on an order.
-
+ *
  * @param \EntityMetadataWrapper $order_wrapper
  *   A wrapped commerce order object.
  *

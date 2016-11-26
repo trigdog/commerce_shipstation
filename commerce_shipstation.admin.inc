@@ -1,7 +1,7 @@
 <?php
+
 /**
  * @file
- *
  * Admin settings page.
  */
 
@@ -17,7 +17,7 @@ function commerce_shipstation_admin_page() {
 
   if (empty($options)) {
     $form['commerce_shipstation_error_message'] = array(
-      '#markup' => t('You\'ll need at least one shipping method module turned on. e.g., Commerce Flatrate shipping'),
+      '#markup' => t("You'll need at least one shipping method module turned on. e.g., Commerce Flatrate shipping"),
     );
   }
   else {
@@ -68,7 +68,7 @@ function commerce_shipstation_admin_page() {
       '#type' => 'select',
       '#title' => t('Number of Records to Export per Page'),
       '#description' => t('Sets the number of orders to send to ShipStation at a time. Change this setting if you experience import timeouts.'),
-      '#options' => array( 20 => 20, 50 => 50, 75 => 75, 100 => 100, 150 => 150 ),
+      '#options' => array(20 => 20, 50 => 50, 75 => 75, 100 => 100, 150 => 150),
       '#default_value' => variable_get('commerce_shipstation_export_paging', '100'),
     );
 
@@ -132,7 +132,7 @@ function commerce_shipstation_admin_page() {
       '#default_value' => variable_get('commerce_shipstation_product_images_field', ''),
     );
 
-    // Gift Wrapping package
+    // Gift Wrapping package.
     if (module_exists('commerce_giftwrap')) {
       $carriers = _commerce_shipstation_get_carriers();
       if (!empty($carriers)) {
@@ -170,7 +170,8 @@ function commerce_shipstation_admin_page() {
       '#type' => 'checkboxes',
       '#title' => t('Shipping Methods Available to ShipStation'),
       '#required' => TRUE,
-      '#options' => $options, // may need to be drupal_map_assoc
+    // May need to be drupal_map_assoc.
+      '#options' => $options,
       '#default_value' => variable_get('commerce_shipstation_exposed_shipping_methods', array()),
     );
 
@@ -216,7 +217,6 @@ function commerce_shipstation_admin_page_submit($form, &$form_state) {
 
   drupal_set_message(t('The configuration options have been saved.'));
 }
-
 
 /**
  * Builds a list of fields available to a commerce entity.

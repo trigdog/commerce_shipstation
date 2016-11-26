@@ -1,7 +1,7 @@
 <?php
+
 /**
  * @file
- *
  * Hooks provided by the Commerce ShipStation module.
  */
 
@@ -15,9 +15,10 @@
  *
  * You may want to add fields, load additional data or even remove some of them.
  *
- * @param $orders array An array of loaded orders.
- * @param $context array
- *  An array of context values to base the alter routines on.
+ * @param array $orders
+ *   An array of loaded orders.
+ * @param array $context
+ *   An array of context values to base the alter routines on.
  *   start_date integer Start date timestamp.
  *   end_date integer End date timestamp.
  *   page integer Current page requested by ShipStation.
@@ -34,8 +35,10 @@ function hook_commerce_shipstation_export_orders_alter(&$orders, $context) {
  *
  * 3-part modules may add features we don't implement in the module out-of-box.
  *
- * @param $order_xml SimpleXMLExtended Order XML representation.
- * @param $order object Commerce Order entity object.
+ * @param SimpleXMLExtended $order_xml
+ *   Order XML representation.
+ * @param object $order
+ *   Commerce Order entity object.
  */
 function hook_commerce_shipstation_order_xml_alter(&$order_xml, $order) {
   if ($order->changed < strtotime('when I was young')) {
@@ -57,8 +60,10 @@ function hook_commerce_shipstation_order_xml_alter(&$order_xml, $order) {
  *
  * 3-part modules may add features we don't implement in the module out-of-box.
  *
- * @param $line_item_xml SimpleXMLExtended Line item XML representation.
- * @param $line_item object Commerce Order entity object.
+ * @param SimpleXMLExtended $line_item_xml
+ *   Line item XML representation.
+ * @param object $line_item
+ *   Commerce Order entity object.
  */
 function hook_commerce_shipstation_line_item_xml_alter(&$line_item_xml, $line_item) {
   if ($line_item->qty > 100) {
