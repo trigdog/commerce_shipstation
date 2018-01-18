@@ -2,12 +2,15 @@
 
 namespace Drupal\commerce_shipstation;
 
+use Drupal\commerce_shipstation\Event\ShipStationEvents;
+use Drupal\commerce_shipstation\Event\ShipStationOrderExportedEvent;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Url;
 use Drupal\image\Entity\ImageStyle;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
+use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 /**
@@ -17,6 +20,13 @@ use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
  */
 class ShipStation {
   /**
+   * ShipStation configuration.
+   *
+   * @var \Drupal\Core\Config\ConfigFactoryInterface
+   */
+  protected $ss_config;
+
+  /**
    * A logger instance.
    *
    * @var \Psr\Log\LoggerInterface
@@ -24,18 +34,18 @@ class ShipStation {
   protected $watchdog;
 
   /**
-   * Shipstation Configuration
-   *
-   * @var \Drupal\Core\Config\ConfigFactoryInterface
-   */
-  protected $ssConfig;
-
-  /**
-   * The entity type manager.
+   * The entity_type manager.
    *
    * @var \Drupal\Core\Entity\EntityTypeManagerInterface
    */
-  protected $entityTypeManager;
+  protected $entity_type_manager;
+
+  /**
+   * The event dispatcher service.
+   *
+   * @var \Symfony\Component\EventDispatcher\EventDispatcherInterface
+   */
+  protected $event_dispatcher;
 
   /**
    * Constructs a new Shipstation Service.
@@ -45,10 +55,11 @@ class ShipStation {
    * @param \Drupal\Core\Config\ConfigFactoryInterface $config_factory
    *   The config factory.
    */
-  public function __construct(ConfigFactoryInterface $config_factory, EntityTypeManagerInterface $entityTypeManager, LoggerInterface $watchdog) {
+  public function __construct(ConfigFactoryInterface $configFactory, EntityTypeManagerInterface $entityTypeManager, LoggerInterface $watchdog, EventDispatcherInterface $eventDispatcher) {
+    $this->ss_config = $configFactory->get('commerce_shipstation.shipstation_config');
     $this->watchdog = $watchdog;
-    $this->ssConfig = $config_factory->get('commerce_shipstation.shipstation_config');
-    $this->entityTypeManager = $entityTypeManager;
+    $this->entity_type_manager = $entityTypeManager;
+    $this->event_dispatcher = $eventDispatcher;
   }
 
   /**
@@ -59,9 +70,9 @@ class ShipStation {
    */
   public function endpointAuthenticate() {
     $authorized = FALSE;
-    $auth_key = $this->ssConfig->get('commerce_shipstation_alternate_auth');
-    $username = $this->ssConfig->get('commerce_shipstation_username');
-    $password = $this->ssConfig->get('commerce_shipstation_password');
+    $auth_key = $this->ss_config->get('commerce_shipstation_alternate_auth');
+    $username = $this->ss_config->get('commerce_shipstation_username');
+    $password = $this->ss_config->get('commerce_shipstation_password');
 
     // Allow ShipStation to authenticate using an auth token.
     if (!empty($auth_key) && !empty($_GET['auth_key']) && $auth_key == $_GET['auth_key']) {
@@ -89,19 +100,19 @@ class ShipStation {
     $start_date = new \DateTime($_GET['start_date'], $timezone);
     $end_date = new \DateTime($_GET['end_date'], $timezone);
     $page = !empty($_GET['page']) ? intval($_GET['page']) : 0;
-    $status = $this->ssConfig->get('commerce_shipstation_export_status');
-    $page_size = $this->ssConfig->get('commerce_shipstation_export_paging');
+    $status = $this->ss_config->get('commerce_shipstation_export_status');
+    $page_size = $this->ss_config->get('commerce_shipstation_export_paging');
     $start_page = $page > 0 ? $page - 1 : 0;
     //TODO: $shipping_services = commerce_shipping_services();
-    $available_methods = $this->ssConfig->get('commerce_shipstation_exposed_shipping_methods');
+    $available_methods = $this->ss_config->get('commerce_shipstation_exposed_shipping_methods');
 
     // Determine site-specific field reference fields.
-    $field_billing_phone_number = $this->ssConfig->get('commerce_shipstation_billing_phone_number_field');
-    $field_shipping_phone_number = $this->ssConfig->get('commerce_shipstation_shipping_phone_number_field');
-    $field_order_notes = $this->ssConfig->get('commerce_shipstation_order_notes_field');
-    $field_customer_notes = $this->ssConfig->get('commerce_shipstation_customer_notes_field');
-    $field_product_images = $this->ssConfig->get('commerce_shipstation_product_images_field');
-    $bundle_type = $this->ssConfig->get('commerce_shipstation_bundle_field');
+    $field_billing_phone_number = $this->ss_config->get('commerce_shipstation_billing_phone_number_field');
+    $field_shipping_phone_number = $this->ss_config->get('commerce_shipstation_shipping_phone_number_field');
+    $field_order_notes = $this->ss_config->get('commerce_shipstation_order_notes_field');
+    $field_customer_notes = $this->ss_config->get('commerce_shipstation_customer_notes_field');
+    $field_product_images = $this->ss_config->get('commerce_shipstation_product_images_field');
+    $bundle_type = $this->ss_config->get('commerce_shipstation_bundle_field');
 
     // Build a query to load orders matching our status.
     $query = \Drupal::entityQuery('commerce_order');
@@ -109,7 +120,7 @@ class ShipStation {
 
     // Limit our query by start date and end date unless we're
     // doing a full reload.
-    if (!$this->ssConfig->get('commerce_shipstation_reload')) {
+    if (!$this->ss_config->get('commerce_shipstation_reload')) {
       $query->condition('changed', array($start_date->getTimestamp(), $end_date->getTimestamp()), 'BETWEEN');
     }
 
@@ -124,7 +135,7 @@ class ShipStation {
     $output = new ShipStationSimpleXMLElement('<Orders></Orders>');
 
     /*TODO: Log the request information.
-    if ($this->ssConfig->get('commerce_shipstation_logging')) {
+    if ($this->ss_config->get('commerce_shipstation_logging')) {
       $message = 'Action:' . check_plain($_GET['action']);
       $message .= ' Orders: ' . (isset($results['commerce_order']) ? count($results['commerce_order']) : 0);
       $message .= ' Since: ' . format_date($start_date->getTimestamp(), 'short') . '(' . $start_date->getTimestamp() . ')';
@@ -134,7 +145,7 @@ class ShipStation {
     }*/
 
     if (isset($results)) {
-      $orders = $this->entityTypeManager->getStorage('commerce_order')->loadMultiple(array_keys($results));
+      $orders = $this->entity_type_manager->getStorage('commerce_order')->loadMultiple(array_keys($results));
 
       // Allow other modules to alter the list of orders.
       $context = [
@@ -161,7 +172,7 @@ class ShipStation {
           if ($order->hasField('shipments') || !$order->get('shipments')->isEmpty()) {
             $shipments = $order->get('shipments')->getValue();
             /** @var \Drupal\commerce_shipping\Entity\ShipmentInterface $shipment */
-            $shipment = $this->entityTypeManager->getStorage('commerce_shipment')->load($shipments[0]['target_id']);
+            $shipment = $this->entity_type_manager->getStorage('commerce_shipment')->load($shipments[0]['target_id']);
             /** @var \Drupal\address\Plugin\Field\FieldType\AddressItem $ship */
             $ship = $shipment->getShippingProfile()->get('address')->first();
           }
@@ -174,7 +185,7 @@ class ShipStation {
           continue;
         }
 
-        if ($this->ssConfig->get('commerce_shipstation_logging')) {
+        if ($this->ss_config->get('commerce_shipstation_logging')) {
           $this->watchdog->log(LogLevel::INFO, '!message', array('!message' => 'Processing order ' . $order->id()));
         }
 
@@ -183,6 +194,7 @@ class ShipStation {
         // Determine the shipping service and shipping method for the order.
         if (!empty($shipping_items)) {
           try {
+            // TODO: more work needs done to map shipping methods
             $shipping_service = $shipment->getShippingService();
             /** @var \Drupal\commerce_shipping\Entity\ShippingMethodInterface $shipping_method */
             $shipping_method = $shipment->getShippingMethod();
@@ -325,7 +337,7 @@ class ShipStation {
               );
 
               // Gift Wrapping package.
-              $gift_wrapping_package = $this->ssConfig->get('commerce_shipstation_giftwrapping_package');
+              $gift_wrapping_package = $this->ss_config->get('commerce_shipstation_giftwrapping_package');
               if (!empty($gift_wrapping_package)) {
                 $this->addCdata(
                   $order_xml, [
@@ -403,7 +415,7 @@ class ShipStation {
               }
               catch (\Exception $ex) {
                 // The current item doesn't have a weight or we can't access it.
-                if ($this->ssConfig->get('commerce_shipstation_logging')) {
+                if ($this->ss_config->get('commerce_shipstation_logging')) {
                   $this->watchdog->log(LogLevel::WARNING, 'Unable to add weight for product id :product_id to shipstation export', array(':product_id' => $product->id()));
                 }
               }
@@ -494,14 +506,15 @@ class ShipStation {
             }
 
           }
-          $test = '';
+
           $this->addCdata($order_xml, $order_fields);
 
           // Alter order XML.
-          //TODO: drupal_alter('commerce_shipstation_order_xml', $order_xml, $order);
+          \Drupal::moduleHandler()->alter('commerce_shipstation_order_xml', $order_xml, $order);
 
-          // Notify rules that the order has been exported.
-          //TODO: is this needed?  rules_invoke_event('commerce_shipstation_order_exported', $order);
+          // Dispatch an event
+          $event = new ShipStationOrderExportedEvent($order);
+          $this->event_dispatcher->dispatch(ShipStationEvents::ORDER_EXPORTED, $event);
         }
       }
     }
@@ -531,11 +544,11 @@ class ShipStation {
       $order_id = $query->execute();
 
       /** @var \Drupal\commerce_order\Entity\OrderInterface $order */
-      $order = $this->entityTypeManager->getStorage('commerce_order')->load($order_id);
+      $order = $this->entity_type_manager->getStorage('commerce_order')->load($order_id);
       if (!empty($order) && $order->hasField('shipments') && !$order->get('shipments')->isEmpty()) {
         $shipments = $order->get('shipments')->getValue();
         /** @var \Drupal\commerce_shipping\Entity\ShipmentInterface $shipment */
-        $shipment = $this->entityTypeManager->getStorage('commerce_shipment')->load($shipments[0]['target_id']);
+        $shipment = $this->entity_type_manager->getStorage('commerce_shipment')->load($shipments[0]['target_id']);
         $shipment->setTrackingCode($tracking_number);
         $shipment->setShippedTime($ship_date);
         //rules_invoke_event('commerce_shipstation_order_success', $commerce_order, $tracking_number, $carrier, $service);
@@ -578,12 +591,12 @@ class ShipStation {
    *
    *
    * @return mixed
-   *   return the json decoded data
+   *   return the json decoded data.
 
   protected function apiRequest($uri) {
     $uri = 'https://'
-        . $this->ssConfig->get('commerce_shipstation_username')
-        . ':' . $this->ssConfig->get('commerce_shipstation_password')
+        . $this->ss_config->get('commerce_shipstation_username')
+        . ':' . $this->ss_config->get('commerce_shipstation_password')
         . '@ssapi.shipstation.com' . $uri;
     $response = drupal_http_request($uri);
 
@@ -615,12 +628,13 @@ class ShipStation {
    * Helper function to format product weight.
    *
    * @param array $data
+   *   Array of weight data.
    *
    * @param string $weight
-   *   The weight of the item
+   *   The weight of the item.
    *
    * @param string $weight_units
-   *   The unit code for the weight
+   *   The unit code for the weight.
    *
    */
   protected function addWeight(&$data, $weight, $weight_units) {

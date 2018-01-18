@@ -5,4 +5,4 @@ services:
 
   commerce_shipstation.shipstation_service:
     class: Drupal\commerce_shipstation\ShipStation
-    arguments: ['@config.factory', '@entity_type.manager', '@logger.channel.commerce_shipstation']
+    arguments: ['@config.factory', '@entity_type.manager', '@logger.channel.commerce_shipstation', '@event_dispatcher']
