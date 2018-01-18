@@ -6,6 +6,7 @@ use Drupal\commerce_shipstation\ShipStation;
 use Drupal\Core\Controller\ControllerBase;
 use Psr\Log\LogLevel;
 use Symfony\Component\DependencyInjection\ContainerInterface;
+use Symfony\Component\HttpFoundation\Response;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
 
 class ShipStationEndpointController extends ControllerBase {
@@ -75,9 +76,13 @@ class ShipStationEndpointController extends ControllerBase {
     // Authenticate the request before proceeding.
     if ($this->shipstation->endpointAuthenticate()) {
       // If ShipStation is authenticated, run the call based on the action it defines.
+      $response = new Response();
       switch ($_GET['action']) {
         case 'export':
-          $this->shipstation->exportOrders();
+          $xml = $this->shipstation->exportOrders();
+          $response->headers->set('Content-type', 'application/xml');
+          $response->setContent($xml);
+          return $response;
           break;
 
         case 'shipnotify':
