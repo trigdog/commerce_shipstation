@@ -1,14 +1,11 @@
 <?php
 
-/**
- * @file
- * Extends SimpleXMLElement for Commerce ShipStation.
- */
+namespace Drupal\commerce_shipstation;
 
 /**
  * Wrapper class to ease XML CDATA using.
  */
-class CommerceShipStationSimpleXMLElement extends SimpleXMLElement {
+class ShipstationSimpleXMLElement extends \SimpleXMLElement {
 
   /**
    * Add CDATA segment.

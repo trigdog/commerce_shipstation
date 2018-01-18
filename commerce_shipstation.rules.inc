@@ -1,9 +1,10 @@
 <?php
-
 /**
  * @file
+ *
  * Declares rules events, actions, and conditions for Commerce Shipstation module.
  */
+
 
 /**
  * Implements hook_rules_event_info().
@@ -11,25 +12,13 @@
 function commerce_shipstation_rules_event_info() {
   $events = array();
 
-  $events['commerce_shipstation_order_exported'] = array(
-    'label' => t('Order has been exported to ShipStation'),
-    'group' => t('Commerce ShipStation'),
-    'variables' => array(
-      'commerce_order' => array(
-        'label' => t('Order', array(), array('context' => 'a Drupal Commerce order')),
-        'type' => 'commerce_order',
-        'skip save' => TRUE,
-      ),
-    ),
-  );
-
   $events['commerce_shipstation_order_success'] = array(
     'label' => t('ShipStation reports an order has completed successfully'),
     'group' => t('Commerce ShipStation'),
     'variables' => array(
       'commerce_order' => array(
-        'label' => t('Order', array(), array('context' => 'a Drupal Commerce order')),
-        'type' => 'commerce_order',
+      'label' => t('Order', array(), array('context' => 'a Drupal Commerce order')),
+      'type' => 'commerce_order',
         'skip save' => TRUE,
       ),
       'tracking_number' => array(

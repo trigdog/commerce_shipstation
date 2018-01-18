@@ -1,0 +1,8 @@
+services:
+  logger.channel.commerce_shipstation:
+    parent: logger.channel_base
+    arguments: ['commerce_shipstation']
+
+  commerce_shipstation.shipstation_service:
+    class: Drupal\commerce_shipstation\ShipStation
+    arguments: ['@config.factory', '@entity_type.manager', '@logger.channel.commerce_shipstation']

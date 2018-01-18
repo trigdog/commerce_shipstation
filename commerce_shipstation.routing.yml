@@ -1,0 +1,17 @@
+commerce_shipstation.shipstation_admin_form:
+  path: 'admin/commerce/config/shipstation'
+  defaults:
+    _form: '\Drupal\commerce_shipstation\Form\ShipStationAdminForm'
+    _title: 'ShipStation Configuration'
+  requirements:
+    _permission: 'administer commerce_shipment'
+  options:
+    _admin_route: TRUE
+
+commerce_shipstation.shipstation_endpoint:
+  path: '/shipstation/api-endpoint'
+  defaults:
+    _controller: '\Drupal\commerce_shipstation\Controller\ShipStationEndpointController::shipstationEndpointRequest'
+    _title: 'ShipStation API Callback URI'
+  requirements:
+    _permission: 'administer commerce_shipment'

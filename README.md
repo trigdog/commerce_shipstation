@@ -19,6 +19,7 @@ Requirements
 This module requires the following modules:
 * Drupal Commerce
 * Commerce Shipping (provided with Drupal Commerce)
+* Commerce Fulfilment
 * Rules
 * at least one shipping method compatible with Commerce Shipping
 
@@ -28,9 +29,16 @@ Additionally, the following modules are recommended:
 Configuration
 ============
 
-You can configure the module settings at admin/commerce/config/shipping/shipstation.
+You can configure the module settings at admin/commerce/config/fulfilment/shipstation.
 
 Usage
 =====
 The module creates an endpoint for ShipStation to communicate with at shipstation/api-endpoint. Follow the instructions
 in the Custom Store Integration Guide to configure a custom store in ShipStation.
+
+To do
+=====
+* complete implementation of watchdog logging
+* implement support for importing coupons and discounts
+* implement support for importing custom order notes
+* implement support for importing sales tax

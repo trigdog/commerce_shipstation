@@ -1,0 +1,9 @@
+name: Commerce ShipStation
+description: Commerce integration with ShipStation, an online multi-channel order fulfillment system.
+core: 8.x
+type: module
+package: Commerce (contrib)
+
+dependencies:
+  - commerce
+  - commerce_shipping
