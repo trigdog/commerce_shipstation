@@ -201,7 +201,7 @@ class ShipStation {
 
           // Set up the xml schema.
           $order_xml = $output->addChild('Order');
-          $order_date = $order->get('placed')->getValue();
+          $order_date = $order->placed->value;
 
           /* TODO: is this needed still?
           // If there are payment transactions beyond the order creation date, use those.
@@ -215,12 +215,12 @@ class ShipStation {
           $order_fields = [
               '#cdata' => [
                   'OrderNumber' => $order->getOrderNumber(),
-                  'OrderStatus' => $order->getState(),
+                  'OrderStatus' => $order->getState()->getName(),
                   'ShippingMethod' => '',//!empty($shipping_line_item->data['shipping_service']['display_title']) ? $shipping_line_item->data['shipping_service']['display_title'] : t('Shipping'),
               ],
               '#other' => [
                   'OrderDate' => date(COMMERCE_SHIPSTATION_DATE_FORMAT, $order_date),
-                  'LastModified' => date(COMMERCE_SHIPSTATION_DATE_FORMAT, $order->get('changed')->getValue()),
+                  'LastModified' => date(COMMERCE_SHIPSTATION_DATE_FORMAT, $order->changed->value),
                   'OrderTotal' => $order->getTotalPrice()->getNumber(),
                   'ShippingAmount' => $shipment->getAmount()->getNumber(),
               ],
@@ -228,7 +228,9 @@ class ShipStation {
 
           if (strtolower($field_order_notes) != 'none') {
             try {
-              $order_fields['#cdata']['InternalNotes'] = $order->get(end(explode('.', $field_order_notes)))->getValue();
+              $field_array = explode('.', $field_order_notes);
+              $field_name = end($field_array);
+              $order_fields['#cdata']['InternalNotes'] = $order->$field_name->value;
             }
             catch (\Exception $ex) {
               // No action needed if there are no order notes.
@@ -237,7 +239,9 @@ class ShipStation {
 
           if (strtolower($field_customer_notes) != 'none') {
             try {
-              $order_fields['#cdata']['CustomerNotes'] = $shipment->getShippingProfile()->get(end(explode('.', $field_customer_notes)))->getValue();
+              $field_array = explode('.', $field_customer_notes);
+              $field_name = end($field_array);
+              $order_fields['#cdata']['CustomerNotes'] = $shipment->getShippingProfile()->$field_name->value;
             }
             catch (\Exception $ex) {
               // No action needed if there are no customer notes.
@@ -249,7 +253,7 @@ class ShipStation {
 
           $customer_fields = [
               '#cdata' => [
-                  'CustomerCode' => $order->getCustomer()->getEmail(),
+                  'CustomerCode' => $order->getEmail(),
               ],
           ];
           $this->addCdata($customer, $customer_fields);
@@ -260,13 +264,15 @@ class ShipStation {
               '#cdata' => [
                   'Name' => $bill ? $bill->getGivenName() . ' ' . $bill->getFamilyName() : '',
                   'Company' => $bill ? $bill->getOrganization() : '',
-                  'Email' => $order->getCustomer()->getEmail(),
+                  'Email' => $order->getEmail(),
               ],
           ];
 
           if (strtolower($field_billing_phone_number) != 'none') {
             try {
-              $billing_fields['#cdata']['Phone'] = $order->getBillingProfile()->get(end(explode('.', $field_billing_phone_number)))->getValue();
+              $field_array = explode('.', $field_billing_phone_number);
+              $field_name = end($field_array);
+              $billing_fields['#cdata']['Phone'] = $order->getBillingProfile()->$field_name->value;
             }
             catch (\Exception $ex) {
               // No action needed if phone can't be added.
@@ -290,7 +296,9 @@ class ShipStation {
           ];
           if (strtolower($field_shipping_phone_number) != 'none') {
             try {
-              $shipping_fields['#cdata']['Phone'] = $shipment->getShippingProfile()->get(end(explode('.', $field_shipping_phone_number)))->getValue();
+              $field_array = explode('.', $field_shipping_phone_number);
+              $field_name = end($field_array);
+              $shipping_fields['#cdata']['Phone'] = $shipment->getShippingProfile()->$field_name->value;
             }
             catch (\Exception $ex) {
               // No action necessary if phone can't be added.
@@ -486,6 +494,7 @@ class ShipStation {
             }
 
           }
+          $test = '';
           $this->addCdata($order_xml, $order_fields);
 
           // Alter order XML.
@@ -497,8 +506,7 @@ class ShipStation {
       }
     }
 
-    // Return the XML response for ShipStation.
-    header('Content-type: application/xml');
+    // Return the XML data for ShipStation.
     $dom = dom_import_simplexml($output)->ownerDocument;
     $dom->formatOutput = TRUE;
     return $dom->saveXML();
@@ -571,7 +579,7 @@ class ShipStation {
    *
    * @return mixed
    *   return the json decoded data
-   */
+
   protected function apiRequest($uri) {
     $uri = 'https://'
         . $this->ssConfig->get('commerce_shipstation_username')
@@ -580,26 +588,28 @@ class ShipStation {
     $response = drupal_http_request($uri);
 
     return json_decode($response->data);
-  }
+  }*/
 
   /**
    * Get list of shipment carriers available in ShipStation.
    *
    * @see http://docs.shipstation.apiary.io/#reference/carriers/list-carriers/list-carriers
-   */
+
   protected function getCarriers() {
     return $this->apiRequest('/carriers');
-  }
+  }*/
 
   /**
    * Get list of shipment packages for a given carrier..
    *
    * @param $carrier
+   *
    * @see http://docs.shipstation.apiary.io/#reference/carriers/list-packages/list-packages
-   */
+
   protected function getPackages($carrier) {
     return $this->apiRequest('/carriers/listpackages?carrierCode=' . urlencode($carrier));
-  }
+  }*/
+
 
   /**
    * Helper function to format product weight.
