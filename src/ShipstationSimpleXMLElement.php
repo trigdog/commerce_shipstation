@@ -5,7 +5,7 @@ namespace Drupal\commerce_shipstation;
 /**
  * Wrapper class to ease XML CDATA using.
  */
-class ShipstationSimpleXMLElement extends \SimpleXMLElement {
+class ShipStationSimpleXMLElement extends \SimpleXMLElement {
 
   /**
    * Add CDATA segment.

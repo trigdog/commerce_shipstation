@@ -121,7 +121,7 @@ class ShipStation {
     $count_result = $query->count()->execute();
 
     // Instantiate a new XML object for our export.
-    $output = new ShipstationSimpleXMLElement('<Orders></Orders>');
+    $output = new ShipStationSimpleXMLElement('<Orders></Orders>');
 
     /*TODO: Log the request information.
     if ($this->ssConfig->get('commerce_shipstation_logging')) {
