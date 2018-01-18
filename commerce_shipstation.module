@@ -11,11 +11,13 @@ const COMMERCE_SHIPSTATION_DATE_FORMAT = 'm/d/y H:m A';
 function commerce_shipstation_help($route_name, \Drupal\Core\Routing\RouteMatchInterface $route_match) {
   switch ($route_name) {
     case 'commerce_shipstation.shipstation_admin_form':
-      return '<p>' . t('This module provides integration with ShipStation using the @url.
-                To connect your store to ShipStation using this service, fill in
-                the "URL to custom XML page" field in the Custom Store Setup dialog
-                with the following URL: !endpoint',
-                ['@url' => \Drupal\Core\Link::fromTextAndUrl('Custom Store Development Integration', \Drupal\Core\Url::fromUri('http://api.shipstation.com/')),
-                '!endpoint' => 'http://' . $_SERVER['HTTP_HOST'] . base_path() . 'shipstation/api-endpoint']) . '</p>';
+      return '<p>' . t('This module provides integration with ShipStation using the 
+              <a href=":url" target="_blank">@url-text</a>.',
+              [':url' => \Drupal\Core\Url::fromUri('http://api.shipstation.com/')->toUriString(),
+              '@url-text' => 'Custom Store Development Integration']) . '</p><p>' .
+              t('To connect your store to ShipStation using this service, fill in
+              the "URL to custom XML page" field in the Custom Store Setup dialog
+              with the following URL: @endpoint', ['@endpoint' => 'http://'
+              . $_SERVER['HTTP_HOST'] . base_path() . 'shipstation/api-endpoint']) . '</p>';
   }
 }
