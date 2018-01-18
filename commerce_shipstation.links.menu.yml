@@ -1,0 +1,5 @@
+commerce_shipstation.configuration:
+  title: 'Shipstation'
+  route_name: 'commerce_shipstation.shipstation_admin_form'
+  parent: 'commerce_shipping.configuration'
+  description: 'Manage your Shipstation settings.'
