@@ -86,7 +86,9 @@ class ShipStationEndpointController extends ControllerBase {
           break;
 
         case 'shipnotify':
-          $this->shipstation->requestShipNotify();
+          $msg = $this->shipstation->requestShipNotify();
+          $response->setContent($msg);
+          return $response;
           break;
 
         default:

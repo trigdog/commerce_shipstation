@@ -5,6 +5,7 @@ namespace Drupal\commerce_shipstation;
 use Drupal\commerce_shipstation\Event\ShipStationEvents;
 use Drupal\commerce_shipstation\Event\ShipStationOrderExportedEvent;
 use Drupal\Core\Config\ConfigFactoryInterface;
+use Drupal\Core\Entity\EntityStorageException;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Url;
 use Drupal\image\Entity\ImageStyle;
@@ -12,6 +13,7 @@ use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
 use Symfony\Component\EventDispatcher\EventDispatcherInterface;
 use Symfony\Component\HttpKernel\Exception\AccessDeniedHttpException;
+use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 
 /**
  * Manage Shipstation API services.
@@ -86,6 +88,7 @@ class ShipStation {
       }
     }
 
+    // TODO: replace with \Drupal\Core\Messenger\MessengerInterface::addMessage() was Drupal 8.5 is out
     // If all authentication methods fail, return a 401.
     drupal_set_message(t('Error: Authentication failed. Please check your credentials and try again.'), 'error');
     $this->watchdog->log(LogLevel::ERROR, 'Error: Authentication failed when accepting request. Enable or check ShipStation request logging for more information.');
@@ -121,7 +124,7 @@ class ShipStation {
     // Limit our query by start date and end date unless we're
     // doing a full reload.
     if (!$this->ss_config->get('commerce_shipstation_reload')) {
-      $query->condition('changed', array($start_date->getTimestamp(), $end_date->getTimestamp()), 'BETWEEN');
+      $query->condition('changed', [$start_date->getTimestamp(), $end_date->getTimestamp()], 'BETWEEN');
     }
 
     // Add the range and re-run the query to get our records.
@@ -141,7 +144,7 @@ class ShipStation {
       $message .= ' Since: ' . format_date($start_date->getTimestamp(), 'short') . '(' . $start_date->getTimestamp() . ')';
       $message .= ' To: ' . format_date($end_date->getTimestamp(), 'short') . '(' . $end_date->getTimestamp() . ')';
 
-      $this->watchdog->log('!message', array('!message' => $message));
+      $this->watchdog->log(LogLevel::INFO, '!message', ['!message' => $message]);
     }*/
 
     if (isset($results)) {
@@ -186,7 +189,7 @@ class ShipStation {
         }
 
         if ($this->ss_config->get('commerce_shipstation_logging')) {
-          $this->watchdog->log(LogLevel::INFO, '!message', array('!message' => 'Processing order ' . $order->id()));
+          $this->watchdog->log(LogLevel::INFO, '!message', ['!message' => 'Processing order ' . $order->id()]);
         }
 
         // Load the shipping line items.
@@ -217,7 +220,7 @@ class ShipStation {
 
           /* TODO: is this needed still?
           // If there are payment transactions beyond the order creation date, use those.
-          foreach (commerce_payment_transaction_load_multiple(array(), array('order_id' => $order->order_id)) as $transaction) {
+          foreach (commerce_payment_transaction_load_multiple([], ['order_id' => $order->order_id]) as $transaction) {
             if ($transaction->status == COMMERCE_PAYMENT_STATUS_SUCCESS && $transaction->created > $order_date) {
               $order_date = $transaction->created;
             }
@@ -399,7 +402,7 @@ class ShipStation {
 
 
             // TODO: Not sure if this is needed anymore
-            // $unit_price = _commerce_shipstation_price_excluding_components($line_item_wrapper->commerce_unit_price->value(), array('discount', 'tax'));
+            // $unit_price = _commerce_shipstation_price_excluding_components($line_item_wrapper->commerce_unit_price->value(), ['discount', 'tax']);
             $line_item_fields = [
                 '#cdata' => $line_item_cdata,
                 '#other' => [
@@ -416,7 +419,7 @@ class ShipStation {
               catch (\Exception $ex) {
                 // The current item doesn't have a weight or we can't access it.
                 if ($this->ss_config->get('commerce_shipstation_logging')) {
-                  $this->watchdog->log(LogLevel::WARNING, 'Unable to add weight for product id :product_id to shipstation export', array(':product_id' => $product->id()));
+                  $this->watchdog->log(LogLevel::WARNING, 'Unable to add weight for product id :product_id to shipstation export', [':product_id' => $product->id()]);
                 }
               }
             }
@@ -432,18 +435,18 @@ class ShipStation {
                 if ($bundle_item->type() == 'commerce_product') {
                   $line_item_xml = $line_items_xml->addChild('Item');
 
-                  $unit_price = _commerce_shipstation_price_excluding_components($line_item_wrapper->commerce_unit_price->value(), array('discount', 'tax'));
-                  $line_item_fields = array(
-                      '#cdata' => array(
-                          'SKU' => $bundle_item->sku->value(),
-                          'Name' => $bundle_item->title->value(),
-                      ),
-                      '#other' => array(
-                          'LineItemID' => $line_item_wrapper->line_item_id->value(),
-                          'Quantity' => (int) $line_item_wrapper->quantity->value(),
-                          'UnitPrice' => commerce_currency_amount_to_decimal($unit_price['amount'], $unit_price['currency_code']),
-                      ),
-                  );
+                  $unit_price = _commerce_shipstation_price_excluding_components($line_item_wrapper->commerce_unit_price->value(), ['discount', 'tax']);
+                  $line_item_fields = [
+                    '#cdata' => [
+                      'SKU' => $bundle_item->sku->value(),
+                      'Name' => $bundle_item->title->value(),
+                    ],
+                    '#other' => [
+                      'LineItemID' => $line_item_wrapper->line_item_id->value(),
+                      'Quantity' => (int) $line_item_wrapper->quantity->value(),
+                      'UnitPrice' => commerce_currency_amount_to_decimal($unit_price['amount'], $unit_price['currency_code']),
+                    ],
+                  ];
 
                   // Add the bundle weight.
                   $bundle_weight_field = commerce_physical_entity_weight_field_name('commerce_product', $bundle_item->value());
@@ -529,11 +532,13 @@ class ShipStation {
    * Callback for ShipStation shipnotify requests.
    */
   public function requestShipNotify() {
+    $timezone = new \DateTimeZone('UTC');
     $order_number = $_GET['order_number'];
     $tracking_number = $_GET['tracking_number'];
     $carrier = $_GET['carrier'];
     $service = $_GET['service'];
-    $ship_date = $_GET['label_create_date'];
+    $completed_date = new \DateTime($_GET['label_create_date'], $timezone);
+    $ship_date = new \DateTime($_GET['ship_date'], $timezone);
 
     // Order number and carrier are required fields for ShipStation and should
     // always be provided in a shipnotify call.
@@ -542,6 +547,7 @@ class ShipStation {
       $query = \Drupal::entityQuery('commerce_order');
       $query->condition('order_number', $order_number);
       $order_id = $query->execute();
+      $order_id = reset($order_id);
 
       /** @var \Drupal\commerce_order\Entity\OrderInterface $order */
       $order = $this->entity_type_manager->getStorage('commerce_order')->load($order_id);
@@ -549,16 +555,33 @@ class ShipStation {
         $shipments = $order->get('shipments')->getValue();
         /** @var \Drupal\commerce_shipping\Entity\ShipmentInterface $shipment */
         $shipment = $this->entity_type_manager->getStorage('commerce_shipment')->load($shipments[0]['target_id']);
+
+        // Update shipping information
         $shipment->setTrackingCode($tracking_number);
-        $shipment->setShippedTime($ship_date);
-        //rules_invoke_event('commerce_shipstation_order_success', $commerce_order, $tracking_number, $carrier, $service);
+        $shipment->setShippedTime($ship_date->getTimestamp());
+        //TODO: Shipping method and Service
+
+        try {
+          $shipment->save();
+        } catch (EntityStorageException $e) {
+          // TODO: replace with \Drupal\Core\Messenger\MessengerInterface::addMessage() was Drupal 8.5 is out
+          $this->watchdog->log(LogLevel::ERROR, 'Shipping Information for Order: @order could not be updated.  Please try again later.', ['@order' => $order_id]);
+          throw new NotFoundHttpException();
+        }
+
+        // Update order
+        // TODO: Can't find a way through state_machine to transition the order status to 'complete' through code....
+
+        return t('Tracking information was received successfully for order: @order',['@order' => $order_id]);
       }
       else {
-        watchdog('commerce_shipstation', 'Unable to load order @order_number for updating via the ShipStation shipnotify call.', array('@order_number' => $order_number), WATCHDOG_ERROR);
+        $this->watchdog->log(LogLevel::ERROR, 'Unable to load order @order_number for updating via the ShipStation shipnotify call.', ['@order_number' => $order_number]);
+        throw new NotFoundHttpException();
       }
     }
     else {
-      print t('Error: missing order info.');
+      $this->watchdog->log(LogLevel::ERROR, 'Required information (Order Number and Carrier) missing from Shipstation request.');
+      throw new NotFoundHttpException();
     }
   }
 
