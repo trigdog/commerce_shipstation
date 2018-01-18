@@ -4,6 +4,7 @@ namespace Drupal\commerce_shipstation;
 
 use Drupal\commerce_shipstation\Event\ShipStationEvents;
 use Drupal\commerce_shipstation\Event\ShipStationOrderExportedEvent;
+use Drupal\Component\Utility\Html;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityStorageException;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
@@ -88,7 +89,7 @@ class ShipStation {
       }
     }
 
-    // TODO: replace with \Drupal\Core\Messenger\MessengerInterface::addMessage() was Drupal 8.5 is out
+    // TODO: replace with \Drupal\Core\Messenger\MessengerInterface::addMessage() once Drupal 8.5 is out
     // If all authentication methods fail, return a 401.
     drupal_set_message(t('Error: Authentication failed. Please check your credentials and try again.'), 'error');
     $this->watchdog->log(LogLevel::ERROR, 'Error: Authentication failed when accepting request. Enable or check ShipStation request logging for more information.');
@@ -137,15 +138,15 @@ class ShipStation {
     // Instantiate a new XML object for our export.
     $output = new ShipStationSimpleXMLElement('<Orders></Orders>');
 
-    /*TODO: Log the request information.
+    //Log the request information.
     if ($this->ss_config->get('commerce_shipstation_logging')) {
-      $message = 'Action:' . check_plain($_GET['action']);
-      $message .= ' Orders: ' . (isset($results['commerce_order']) ? count($results['commerce_order']) : 0);
-      $message .= ' Since: ' . format_date($start_date->getTimestamp(), 'short') . '(' . $start_date->getTimestamp() . ')';
-      $message .= ' To: ' . format_date($end_date->getTimestamp(), 'short') . '(' . $end_date->getTimestamp() . ')';
+      $message = 'Action:' . Html::escape($_GET['action']) . '\n';
+      $message .= 'Orders: ' . (isset($results) ? $count_result : 0) . '\n';
+      $message .= 'Since: ' . \Drupal::service('date.formatter')->format($start_date->getTimestamp(), 'short') . '(' . $start_date->getTimestamp() . ')\n';
+      $message .= 'To: ' . \Drupal::service('date.formatter')->format($end_date->getTimestamp(), 'short') . '(' . $end_date->getTimestamp() . ')';
 
       $this->watchdog->log(LogLevel::INFO, '!message', ['!message' => $message]);
-    }*/
+    }
 
     if (isset($results)) {
       $orders = $this->entity_type_manager->getStorage('commerce_order')->loadMultiple(array_keys($results));
@@ -474,18 +475,14 @@ class ShipStation {
               continue;
             }
 
-
-
-            // TODO: Finish up the tax adjustment
-            /*
+            // TODO: Test Tax
             // Append tax data to the response.
-            if (isset($component['price']['data']['tax_rate'])) {
+            if ($adjustment->getType() === 'tax') {
               if (!isset($order_fields['#cdata']['TaxAmount'])) {
                 $order_fields['#cdata']['TaxAmount'] = 0;
               }
-              $order_fields['#cdata']['TaxAmount'] += round(commerce_currency_amount_to_decimal($component['price']['amount'], $component['price']['currency_code']), 2);
+              $order_fields['#cdata']['TaxAmount'] += round($adjustment->getAmount()->getNumber(), 2);
             }
-            */
 
             // Create line items for promotions/discounts.
             if ($adjustment->getType() === 'promotion') {
@@ -606,46 +603,6 @@ class ShipStation {
       }
     }
   }
-
-  /**
-   * Process API request.
-   *
-   * @param $uri
-   *
-   *
-   * @return mixed
-   *   return the json decoded data.
-
-  protected function apiRequest($uri) {
-    $uri = 'https://'
-        . $this->ss_config->get('commerce_shipstation_username')
-        . ':' . $this->ss_config->get('commerce_shipstation_password')
-        . '@ssapi.shipstation.com' . $uri;
-    $response = drupal_http_request($uri);
-
-    return json_decode($response->data);
-  }*/
-
-  /**
-   * Get list of shipment carriers available in ShipStation.
-   *
-   * @see http://docs.shipstation.apiary.io/#reference/carriers/list-carriers/list-carriers
-
-  protected function getCarriers() {
-    return $this->apiRequest('/carriers');
-  }*/
-
-  /**
-   * Get list of shipment packages for a given carrier..
-   *
-   * @param $carrier
-   *
-   * @see http://docs.shipstation.apiary.io/#reference/carriers/list-packages/list-packages
-
-  protected function getPackages($carrier) {
-    return $this->apiRequest('/carriers/listpackages?carrierCode=' . urlencode($carrier));
-  }*/
-
 
   /**
    * Helper function to format product weight.
