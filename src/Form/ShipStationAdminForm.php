@@ -6,6 +6,7 @@ use Drupal\Core\Entity\EntityTypeBundleInfoInterface;
 use Drupal\Core\Field\BaseFieldDefinition;
 use Drupal\Core\Form\ConfigFormBase;
 use Drupal\Core\Form\FormStateInterface;
+use Drupal\field\Entity\FieldConfig;
 
 /**
  * ShipStation Admin Form
@@ -148,7 +149,7 @@ class ShipStationAdminForm extends ConfigFormBase
         '#title' => $this->t('Field used for bundled products'),
         '#required' => FALSE,
         '#description' => $this->t('Set this if you are using an Entity Reference field on line items to create a product bundle. This will ensure that your bundled products are imported by ShipStation.'),
-        '#options' => $this->loadFieldOptions('commerce_order_item'),
+        '#options' => $this->loadFieldOptions('commerce_order_item', NULL, ['entity_reference', 'dynamic_entity_reference']),
         '#default_value' => $ss_config->get('commerce_shipstation_bundle_field'),
     ];
 
@@ -261,8 +262,18 @@ class ShipStationAdminForm extends ConfigFormBase
 
   /**
    * Builds a list of all fields available on the site.
+   *
+   * @param string $entity_type
+   *  Entity Type
+   * @param string $bundle
+   *  Entity bundle
+   * @param array $field_types
+   *   restrict options to certain types
+   *
+   * @return array
+   *   A list of options
    */
-  private function loadFieldOptions($entity_type, $bundle = NULL)
+  private function loadFieldOptions($entity_type, $bundle = NULL, $field_types = [])
   {
     /** @var \Drupal\Core\Entity\EntityFieldManager $fieldManager */
     $fieldManager = \Drupal::service('entity_field.manager');
@@ -286,16 +297,23 @@ class ShipStationAdminForm extends ConfigFormBase
 
     $options = ['none' => t('None')];
     if (!empty($fields)) {
-      /** @var BaseFieldDefinition $field */
+      /** @var \Drupal\Core\Field\FieldDefinitionInterface $field */
       foreach ($fields as $field) {
-        $field_name = (string) $field->getLabel();
-        $bundle_name = $field->getTargetEntityTypeId();
+        // Load Config Fields only
+        if ($field instanceof FieldConfig) {
+          $field_type = $field->getType();
+          // Check field type and limit to provided types
+          if (in_array($field_type, $field_types) || empty($field_types)) {
+            $field_name = (string)$field->getLabel();
+            $bundle_name = $field->getTargetEntityTypeId();
 
-        $options[$entity_type . '.' . $field->getName()] = t('@bundle: @field',
-          [
-            '@bundle' => $bundle_name,
-            '@field' => $field_name
-          ]);
+            $options[$entity_type . '.' . $field->getName()] = t('@bundle: @field',
+                [
+                    '@bundle' => $bundle_name,
+                    '@field' => $field_name
+                ]);
+          }
+        }
       }
     }
 
