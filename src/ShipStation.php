@@ -540,15 +540,10 @@ class ShipStation {
     // Order number and carrier are required fields for ShipStation and should
     // always be provided in a shipnotify call.
     if ($order_number && $carrier) {
-      // Build a query to load orders matching our order number.
-      $query = \Drupal::entityQuery('commerce_order');
-      $query->condition('order_number', $order_number);
-      $order_id = $query->execute();
-      $order_id = reset($order_id);
-
       /** @var \Drupal\commerce_order\Entity\OrderInterface $order */
-      $order = $this->entity_type_manager->getStorage('commerce_order')->load($order_id);
-      if (!empty($order) && $order->hasField('shipments') && !$order->get('shipments')->isEmpty()) {
+      $order = $this->entity_type_manager->getStorage('commerce_order')->loadByProperties(['order_number' => $order_number]);
+      $order = reset($order);
+      if (!empty($order)) {
         $shipments = $order->get('shipments')->getValue();
         /** @var \Drupal\commerce_shipping\Entity\ShipmentInterface $shipment */
         $shipment = $this->entity_type_manager->getStorage('commerce_shipment')->load($shipments[0]['target_id']);
@@ -562,14 +557,14 @@ class ShipStation {
           $shipment->save();
         } catch (EntityStorageException $e) {
           // TODO: replace with \Drupal\Core\Messenger\MessengerInterface::addMessage() was Drupal 8.5 is out
-          $this->watchdog->log(LogLevel::ERROR, 'Shipping Information for Order: @order could not be updated.  Please try again later.', ['@order' => $order_id]);
+          $this->watchdog->log(LogLevel::ERROR, 'Shipping Information for Order: @order could not be updated.  Please try again later.', ['@order' => $order->id()]);
           throw new NotFoundHttpException();
         }
 
         // Update order
         // TODO: Can't find a way through state_machine to transition the order status to 'complete' through code....
 
-        return t('Tracking information was received successfully for order: @order',['@order' => $order_id]);
+        return t('Tracking information was received successfully for order: @order',['@order' => $order->id()]);
       }
       else {
         $this->watchdog->log(LogLevel::ERROR, 'Unable to load order @order_number for updating via the ShipStation shipnotify call.', ['@order_number' => $order_number]);
