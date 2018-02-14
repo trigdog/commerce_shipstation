@@ -97,8 +97,12 @@ class ShipStationEndpointController extends ControllerBase {
           return $response;
           break;
 
-        case 'shipnotify':
-          $msg = $this->shipstation->requestShipNotify();
+        case ShipStation::SHIPNOTIFY_ACTION:
+          $order_number = $request->query->get('order_number');
+          $tracking_number = $request->query->get('tracking_number');
+          $carrier = $request->query->get('carrier');
+          $ship_date = $request->query->get('ship_date');
+          $msg = $this->shipstation->requestShipNotify($order_number, $tracking_number, $carrier, $ship_date);
           $response->setContent($msg);
           return $response;
           break;

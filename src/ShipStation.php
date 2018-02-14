@@ -24,6 +24,7 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
 class ShipStation {
 
   const EXPORT_ACTION = 'export';
+  const SHIPNOTIFY_ACTION = 'shipnotify';
 
   /**
    * ShipStation configuration.
@@ -552,14 +553,9 @@ class ShipStation {
   /**
    * Callback for ShipStation shipnotify requests.
    */
-  public function requestShipNotify() {
+  public function requestShipNotify($order_number, $tracking_number, $carrier, $ship_date) {
     $timezone = new \DateTimeZone('UTC');
-    $order_number = $_GET['order_number'];
-    $tracking_number = $_GET['tracking_number'];
-    $carrier = $_GET['carrier'];
-    $service = $_GET['service'];
-    $completed_date = new \DateTime($_GET['label_create_date'], $timezone);
-    $ship_date = new \DateTime($_GET['ship_date'], $timezone);
+    $ship_date = new \DateTime($ship_date, $timezone);
 
     // Order number and carrier are required fields for ShipStation and should
     // always be provided in a shipnotify call.
