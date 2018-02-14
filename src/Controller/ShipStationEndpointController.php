@@ -78,7 +78,7 @@ class ShipStationEndpointController extends ControllerBase {
       $request_vars['SS-UserName'] = '******';
       $request_vars['SS-Password'] = '******';
       $request_vars['auth_key'] = '*****';
-      $this->watchdog->log(LogLevel::INFO,'ShipStation request: !get', array('!get' => var_export($request_vars, TRUE)));
+      $this->watchdog->log(LogLevel::INFO,'ShipStation request: @get', array('@get' => var_export($request_vars, TRUE)));
     }
 
     // Authenticate the request before proceeding.

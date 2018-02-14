@@ -164,12 +164,12 @@ class ShipStation {
 
     //Log the request information.
     if ($this->ss_config->get('commerce_shipstation_logging')) {
-      $message = 'Action:' . self::EXPORT_ACTION . '\n';
-      $message .= 'Orders: ' . (isset($results) ? $count_result : 0) . '\n';
-      $message .= 'Since: ' . \Drupal::service('date.formatter')->format($start_date->getTimestamp(), 'short') . '(' . $start_date->getTimestamp() . ')\n';
+      $message = 'Action:' . self::EXPORT_ACTION . "\n";
+      $message .= 'Orders: ' . (isset($results) ? $count_result : 0) . "\n";
+      $message .= 'Since: ' . \Drupal::service('date.formatter')->format($start_date->getTimestamp(), 'short') . '(' . $start_date->getTimestamp() . ")\n";
       $message .= 'To: ' . \Drupal::service('date.formatter')->format($end_date->getTimestamp(), 'short') . '(' . $end_date->getTimestamp() . ')';
 
-      $this->watchdog->log(LogLevel::INFO, '!message', ['!message' => $message]);
+      $this->watchdog->log(LogLevel::INFO, '@message', ['@message' => $message]);
     }
 
     if (isset($results)) {
@@ -211,12 +211,12 @@ class ShipStation {
           $ship = FALSE;
         }
 
-        if (!$ship) {
+        if (!isset($ship) || !$ship) {
           continue;
         }
 
         if ($this->ss_config->get('commerce_shipstation_logging')) {
-          $this->watchdog->log(LogLevel::INFO, '!message', ['!message' => 'Processing order ' . $order->id()]);
+          $this->watchdog->log(LogLevel::INFO, '@message', ['@message' => 'Processing order ' . $order->id()]);
         }
 
         // Load the shipping line items.
