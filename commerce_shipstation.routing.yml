@@ -14,4 +14,4 @@ commerce_shipstation.shipstation_endpoint:
     _controller: '\Drupal\commerce_shipstation\Controller\ShipStationEndpointController::shipstationEndpointRequest'
     _title: 'ShipStation API Callback URI'
   requirements:
-    _permission: 'administer commerce_shipment'
+    _access: 'TRUE'
