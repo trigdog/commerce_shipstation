@@ -3,7 +3,9 @@ description: Commerce integration with ShipStation, an online multi-channel orde
 core: 8.x
 type: module
 package: Commerce (contrib)
+configure: commerce_shipstation.shipstation_admin_form
 
 dependencies:
+  - drupal:image
   - commerce
   - commerce_shipping

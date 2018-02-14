@@ -144,14 +144,15 @@ class ShipStationAdminForm extends ConfigFormBase
     ];
 
     // Product bundle field to import.
-    $form['commerce_shipstation_bundle_field'] = [
+    // TODO: Finish this for bundles
+    /*$form['commerce_shipstation_bundle_field'] = [
         '#type' => 'select',
         '#title' => $this->t('Field used for bundled products'),
         '#required' => FALSE,
         '#description' => $this->t('Set this if you are using an Entity Reference field on line items to create a product bundle. This will ensure that your bundled products are imported by ShipStation.'),
         '#options' => $this->loadFieldOptions('commerce_order_item', NULL, ['entity_reference', 'dynamic_entity_reference']),
         '#default_value' => $ss_config->get('commerce_shipstation_bundle_field'),
-    ];
+    ];*/
 
     // Order notes to import.
     $form['commerce_shipstation_order_notes_field'] = [
