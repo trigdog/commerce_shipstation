@@ -4,11 +4,11 @@ namespace Drupal\commerce_shipstation;
 
 use Drupal\commerce_shipstation\Event\ShipStationEvents;
 use Drupal\commerce_shipstation\Event\ShipStationOrderExportedEvent;
-use Drupal\Component\Utility\Html;
 use Drupal\Core\Config\ConfigFactoryInterface;
 use Drupal\Core\Entity\EntityStorageException;
 use Drupal\Core\Entity\EntityTypeManagerInterface;
 use Drupal\Core\Url;
+use Drupal\file\FileInterface;
 use Drupal\image\Entity\ImageStyle;
 use Psr\Log\LoggerInterface;
 use Psr\Log\LogLevel;
@@ -22,6 +22,10 @@ use Symfony\Component\HttpKernel\Exception\NotFoundHttpException;
  * @package Drupal\commerce_shipstation
  */
 class ShipStation {
+
+  const EXPORT_ACTION = 'export';
+  const SHIPNOTIFY_ACTION = 'shipnotify';
+
   /**
    * ShipStation configuration.
    *
@@ -68,17 +72,19 @@ class ShipStation {
   /**
    * Authorizes a ShipStation request.
    *
+   * @param null|string $request_auth_key
+   *   The auth token. Allows ShipStation to authenticate using an auth token.
+   *
    * @return bool
    *   TRUE if authentication methods succeed, FALSE if they fail.
    */
-  public function endpointAuthenticate() {
-    $authorized = FALSE;
+  public function endpointAuthenticate($request_auth_key = NULL) {
     $auth_key = $this->ss_config->get('commerce_shipstation_alternate_auth');
     $username = $this->ss_config->get('commerce_shipstation_username');
     $password = $this->ss_config->get('commerce_shipstation_password');
 
     // Allow ShipStation to authenticate using an auth token.
-    if (!empty($auth_key) && !empty($_GET['auth_key']) && $auth_key == $_GET['auth_key']) {
+    if ($auth_key && $request_auth_key && $auth_key == $request_auth_key) {
       return TRUE;
     }
 
@@ -98,15 +104,29 @@ class ShipStation {
 
   /**
    * Identify orders to send back to shipstation.
+   *
+   * @param string $start_date
+   *   The start date in UTC time.
+   *   Format: MM/dd/yyyy HH:mm (24 hour notation).
+   *   For example: 03/23/2012 21:09
+   * @param string $end_date
+   *   The end date in UTC time. Same format as start_date.
+   * @param int $page
+   *   A current page. See "Paging" on the shipstation docs:
+   *   https://help.shipstation.com/hc/en-us/articles/205928478#1a
+   *
+   * @return string
+   *   The XML formatted data.
+   *
+   * @throws \Drupal\Component\Plugin\Exception\InvalidPluginDefinitionException
    */
-  public function exportOrders() {
+  public function exportOrders($start_date, $end_date, $page = 0) {
     $timezone = new \DateTimeZone('UTC');
-    $start_date = new \DateTime($_GET['start_date'], $timezone);
-    $end_date = new \DateTime($_GET['end_date'], $timezone);
-    $page = !empty($_GET['page']) ? intval($_GET['page']) : 0;
+    $start_date = new \DateTime($start_date, $timezone);
+    $end_date = new \DateTime($end_date, $timezone);
     $status = $this->ss_config->get('commerce_shipstation_export_status');
     $page_size = $this->ss_config->get('commerce_shipstation_export_paging');
-    $start_page = $page > 0 ? $page - 1 : 0;
+    $page = intval($page);
     //TODO: $shipping_services = commerce_shipping_services();
     $available_methods = $this->ss_config->get('commerce_shipstation_exposed_shipping_methods');
 
@@ -116,7 +136,8 @@ class ShipStation {
     $field_order_notes = $this->ss_config->get('commerce_shipstation_order_notes_field');
     $field_customer_notes = $this->ss_config->get('commerce_shipstation_customer_notes_field');
     $field_product_images = $this->ss_config->get('commerce_shipstation_product_images_field');
-    $bundle_type = $this->ss_config->get('commerce_shipstation_bundle_field');
+    // TODO: Finish this for bundles
+    // $bundle_type = $this->ss_config->get('commerce_shipstation_bundle_field');
 
     // Build a query to load orders matching our status.
     $query = \Drupal::entityQuery('commerce_order');
@@ -128,24 +149,28 @@ class ShipStation {
       $query->condition('changed', [$start_date->getTimestamp(), $end_date->getTimestamp()], 'BETWEEN');
     }
 
+    // Execute the query without the range to get a count.
+    $count_query = clone $query;
+    $count_result = $count_query->count()->execute();
+    $pages = ceil($count_result / $page_size);
+    $page = $page > $pages ? 0 : $page;
+    $start_page = $page > 0 ? $page - 1 : 0;
+
     // Add the range and re-run the query to get our records.
     $query->range($start_page * $page_size, $page_size);
     $results = $query->execute();
-
-    // Execute the query without the range to get a count.
-    $count_result = $query->count()->execute();
 
     // Instantiate a new XML object for our export.
     $output = new ShipStationSimpleXMLElement('<Orders></Orders>');
 
     //Log the request information.
     if ($this->ss_config->get('commerce_shipstation_logging')) {
-      $message = 'Action:' . Html::escape($_GET['action']) . '\n';
-      $message .= 'Orders: ' . (isset($results) ? $count_result : 0) . '\n';
-      $message .= 'Since: ' . \Drupal::service('date.formatter')->format($start_date->getTimestamp(), 'short') . '(' . $start_date->getTimestamp() . ')\n';
+      $message = 'Action:' . self::EXPORT_ACTION . "\n";
+      $message .= 'Orders: ' . (isset($results) ? $count_result : 0) . "\n";
+      $message .= 'Since: ' . \Drupal::service('date.formatter')->format($start_date->getTimestamp(), 'short') . '(' . $start_date->getTimestamp() . ")\n";
       $message .= 'To: ' . \Drupal::service('date.formatter')->format($end_date->getTimestamp(), 'short') . '(' . $end_date->getTimestamp() . ')';
 
-      $this->watchdog->log(LogLevel::INFO, '!message', ['!message' => $message]);
+      $this->watchdog->log(LogLevel::INFO, '@message', ['@message' => $message]);
     }
 
     if (isset($results)) {
@@ -160,7 +185,7 @@ class ShipStation {
       ];
       \Drupal::moduleHandler()->alter('commerce_shipstation_export_orders', $orders, $context);
 
-      $output['pages'] = ceil(count($count_result) / $page_size);
+      $output['pages'] = $pages;
 
       /** @var \Drupal\commerce_order\Entity\OrderInterface $order */
       foreach ($orders as $order) {
@@ -175,22 +200,24 @@ class ShipStation {
         try {
           if ($order->hasField('shipments') || !$order->get('shipments')->isEmpty()) {
             $shipments = $order->get('shipments')->getValue();
-            /** @var \Drupal\commerce_shipping\Entity\ShipmentInterface $shipment */
-            $shipment = $this->entity_type_manager->getStorage('commerce_shipment')->load($shipments[0]['target_id']);
-            /** @var \Drupal\address\Plugin\Field\FieldType\AddressItem $ship */
-            $ship = $shipment->getShippingProfile()->get('address')->first();
+            if ($shipments) {
+              /** @var \Drupal\commerce_shipping\Entity\ShipmentInterface $shipment */
+              $shipment = $this->entity_type_manager->getStorage('commerce_shipment')->load($shipments[0]['target_id']);
+              /** @var \Drupal\address\Plugin\Field\FieldType\AddressItem $ship */
+              $ship = $shipment->getShippingProfile()->get('address')->first();
+            }
           }
         }
         catch (\Exception $ex) {
           $ship = FALSE;
         }
 
-        if (!$ship) {
+        if (!isset($ship) || !$ship) {
           continue;
         }
 
         if ($this->ss_config->get('commerce_shipstation_logging')) {
-          $this->watchdog->log(LogLevel::INFO, '!message', ['!message' => 'Processing order ' . $order->id()]);
+          $this->watchdog->log(LogLevel::INFO, '@message', ['@message' => 'Processing order ' . $order->id()]);
         }
 
         // Load the shipping line items.
@@ -231,8 +258,8 @@ class ShipStation {
           $order_fields = [
               '#cdata' => [
                   'OrderNumber' => $order->getOrderNumber(),
-                  'OrderStatus' => $order->getState()->getName(),
-                  'ShippingMethod' => '',//!empty($shipping_line_item->data['shipping_service']['display_title']) ? $shipping_line_item->data['shipping_service']['display_title'] : t('Shipping'),
+                  'OrderStatus' => $order->getState()->value,
+                  'ShippingMethod' => $shipping_method->getName(),
               ],
               '#other' => [
                   'OrderDate' => date(COMMERCE_SHIPSTATION_DATE_FORMAT, $order_date),
@@ -380,24 +407,22 @@ class ShipStation {
             if (strtolower($field_product_images) != 'none') {
               try {
                 $product_image = explode('.', $field_product_images);
-                if (reset($product_image) === 'commerce_product_variation') {
-                  $image = $product_variation->get(end($product_image))->entity;
-                }
-                else {
-                  $image = $product->get(end($product_image));
-                }
+                $image = $product->get(end($product_image));
 
+                if ($image->getFieldDefinition()->getType() != 'image') {
+                  $image = FALSE;
+                }
               }
               catch (\Exception $ex) {
                 $image = FALSE;
               }
 
               if (!empty($image)) {
-                // Use the delta 0 image if it's multi-valued.
-                if (is_array($image)) {
-                  $image = reset($image);
+                if ($image->entity && $image->entity instanceof FileInterface) {
+                  $url = $image->entity->getFileUri();
+                  $url = Url::fromUri($url, ['absolute'=>TRUE])->toUriString();
+                  $line_item_cdata['ImageUrl'] = ImageStyle::load('thumbnail')->buildUrl($url);
                 }
-                $line_item_cdata['ImageUrl'] = ImageStyle::load('thumbnail')->buildUrl(Url::fromUri($image->getFileUri(), ['absolute'=>TRUE])->toUriString());
               }
             }
 
@@ -528,14 +553,9 @@ class ShipStation {
   /**
    * Callback for ShipStation shipnotify requests.
    */
-  public function requestShipNotify() {
+  public function requestShipNotify($order_number, $tracking_number, $carrier, $ship_date) {
     $timezone = new \DateTimeZone('UTC');
-    $order_number = $_GET['order_number'];
-    $tracking_number = $_GET['tracking_number'];
-    $carrier = $_GET['carrier'];
-    $service = $_GET['service'];
-    $completed_date = new \DateTime($_GET['label_create_date'], $timezone);
-    $ship_date = new \DateTime($_GET['ship_date'], $timezone);
+    $ship_date = new \DateTime($ship_date, $timezone);
 
     // Order number and carrier are required fields for ShipStation and should
     // always be provided in a shipnotify call.
